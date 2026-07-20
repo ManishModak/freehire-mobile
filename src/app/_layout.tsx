@@ -1,10 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { getColors } from '@/constants/freehire';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,13 +16,29 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const c = getColors(colorScheme);
+
+  // Root Stack. The `(tabs)` group owns the tab bar and renders headerless; the
+  // job-detail screen pushes over it with a native back button, tinted to match
+  // the freehire palette so the header reads as part of the app, not chrome.
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
-        <AppTabs />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: c.background },
+            headerTintColor: c.brandStrong,
+            headerTitleStyle: { color: c.foreground },
+            contentStyle: { backgroundColor: c.background },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* No native header — the detail screen draws its own compact back
+              chevron so the empty header bar never eats vertical space. */}
+          <Stack.Screen name="jobs/[slug]" options={{ headerShown: false }} />
+        </Stack>
       </ThemeProvider>
     </QueryClientProvider>
   );

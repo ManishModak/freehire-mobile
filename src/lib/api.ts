@@ -28,3 +28,14 @@ async function getJSON<T>(path: string): Promise<T> {
 export function listJobs(limit: number, offset: number): Promise<Page<Job>> {
   return getJSON<Page<Job>>(`/api/v1/jobs?limit=${limit}&offset=${offset}`);
 }
+
+/**
+ * One job by its public slug, for the detail screen. This read returns the FULL
+ * job model (unlike the feed's subset): `reality` as an object, `view_count`,
+ * `closed_at`, and the extended enrichment facets. The endpoint wraps the record
+ * in a `{ data }` envelope, so we unwrap it here and hand the screen a plain Job.
+ */
+export async function getJob(slug: string): Promise<Job> {
+  const { data } = await getJSON<{ data: Job }>(`/api/v1/jobs/${slug}`);
+  return data;
+}

@@ -16,6 +16,29 @@ export type Enrichment = {
   salary_max?: number;
   salary_currency?: string; // "USD" | "EUR" | "GBP"
   salary_period?: string; // "year" | "month" | "day" | "hour"
+  // --- Extra facets the detail view reads (absent on the feed subset) ---------
+  experience_years_min?: number;
+  english_level?: string; // "none" sentinel means "unspecified" — hide it
+  relocation?: string;
+  visa_sponsorship?: boolean;
+  company_type?: string; // e.g. "agency", "startup"
+  company_size?: string; // e.g. "11-50"
+  domains?: string[]; // industry domains
+  skills?: string[]; // enrichment may carry its own skill list
+};
+
+/**
+ * The job-reality trust signal. The single-job endpoint returns this as an
+ * OBJECT of observable facts (the feed omits it). `class` drives the badge:
+ * "fresh" shows nothing; "stale" a muted age chip; "likely-evergreen" an amber
+ * warning. The counts are the evidence rendered beside the chip.
+ */
+export type Reality = {
+  class: string; // "fresh" | "stale" | "likely-evergreen" | ...
+  age_days: number;
+  repost_count: number;
+  mass_posting_count: number;
+  fake_freshness: boolean;
 };
 
 export type Job = {
@@ -27,12 +50,18 @@ export type Job = {
   description?: string | null; // raw HTML
   url?: string;
   source?: string;
-  reality?: string | null; // trust signal, e.g. "verified"
+  reality?: Reality | null; // trust signal (object; detail endpoint only)
+  work_mode?: string | null; // top-level on the detail read (mirrors enrichment)
   regions?: string[];
   countries?: string[];
   cities?: string[];
   skills?: string[]; // served dictionary facet
   posted_at?: string | null; // ISO timestamp
+  created_at?: string | null;
+  closed_at?: string | null; // set when the position stops accepting applications
+  view_count?: number; // distinct signed-in viewers
+  applied_count?: number; // distinct applicants
+  manually_added?: boolean;
   enrichment?: Enrichment | null;
 };
 
