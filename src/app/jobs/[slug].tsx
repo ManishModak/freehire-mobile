@@ -91,36 +91,23 @@ export default function JobDetailScreen() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.fill, { backgroundColor: c.background }]}>
+      {/* Top bar: back chevron with the company rail inline beside it, so the
+          logo + name sit level with the arrow instead of on their own row. */}
       <View style={styles.topBar}>
         <BackButton color={c.foreground} />
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Company rail — a quiet eyebrow above the title. */}
         <View style={styles.companyRow}>
-          <CompanyLogo name={job.company || '?'} size={32} />
+          <CompanyLogo name={job.company || '?'} size={26} />
           <Text numberOfLines={1} style={[styles.company, { color: c.mutedForeground }]}>
             {job.company || 'Unknown company'}
           </Text>
         </View>
-
+      </View>
+      <ScrollView contentContainerStyle={styles.content}>
         {/* Title hero. */}
         <Text style={[styles.title, { color: c.foreground }]}>{job.title}</Text>
 
         {/* Trust signal — detailed here (evidence beside the chip). */}
         <RealityBadge reality={job.reality} postedAt={job.posted_at} detailed />
-
-        {/* Primary CTA: opens the original posting in an in-app browser. */}
-        {job.url ? (
-          <Pressable
-            onPress={() => WebBrowser.openBrowserAsync(job.url as string)}
-            style={({ pressed }) => [
-              styles.cta,
-              { backgroundColor: c.brand },
-              pressed && { opacity: 0.85 },
-            ]}>
-            <Text style={[styles.ctaText, { color: c.brandForeground }]}>Show →</Text>
-          </Pressable>
-        ) : null}
 
         {/* Closed banner — the position no longer accepts applications. */}
         {job.closed_at ? (
@@ -200,6 +187,22 @@ export default function JobDetailScreen() {
 
         <JobDescription html={job.description} />
       </ScrollView>
+
+      {/* Pinned primary CTA — anchored at the bottom so it's always reachable,
+          and opens the original posting in an in-app browser. */}
+      {job.url ? (
+        <View style={[styles.footer, { borderTopColor: c.border, backgroundColor: c.background }]}>
+          <Pressable
+            onPress={() => WebBrowser.openBrowserAsync(job.url as string)}
+            style={({ pressed }) => [
+              styles.cta,
+              { backgroundColor: c.brand },
+              pressed && { opacity: 0.85 },
+            ]}>
+            <Text style={[styles.ctaText, { color: c.brandForeground }]}>Show →</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -208,6 +211,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', gap: Space.md },
   topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.xs,
     paddingHorizontal: Space.sm,
     paddingVertical: Space.xs,
   },
@@ -223,6 +229,7 @@ const styles = StyleSheet.create({
     gap: Space.md,
   },
   companyRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Space.sm,
@@ -237,6 +244,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 30,
     letterSpacing: -0.4,
+  },
+  footer: {
+    borderTopWidth: 1,
+    paddingHorizontal: Space.lg,
+    paddingTop: Space.md,
+    paddingBottom: Space.sm,
   },
   cta: {
     borderRadius: Radius.lg,

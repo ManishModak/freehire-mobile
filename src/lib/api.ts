@@ -5,7 +5,7 @@
  * endpoints, so the mobile feed and the website read identical data.
  */
 
-import type { Job, Page } from './types';
+import type { FacetCounts, Job, Page } from './types';
 
 /** Production API. Public, unauthenticated reads — no key needed for the feed. */
 export const API_BASE = 'https://freehire.dev';
@@ -21,12 +21,30 @@ async function getJSON<T>(path: string): Promise<T> {
 }
 
 /**
- * One page of the global jobs feed, newest first. `offset` drives pagination —
- * callers add `limit` each time to walk forward. Returns the full `Page` so the
- * caller can read `meta.total` (there are millions) and know when to stop.
+ * The filtered/searched feed. Takes the serialized filter query (from
+ * `filtersToQuery`) and appends the request constants: `semantic_ratio=0`
+ * (keyword ranking, matching the web) plus pagination. An empty `query` yields
+ * the plain newest-first stream, so this cleanly replaces the old `listJobs`.
  */
-export function listJobs(limit: number, offset: number): Promise<Page<Job>> {
-  return getJSON<Page<Job>>(`/api/v1/jobs?limit=${limit}&offset=${offset}`);
+export function searchJobs(query: string, limit: number, offset: number): Promise<Page<Job>> {
+  const params = new URLSearchParams(query);
+  params.set('semantic_ratio', '0');
+  params.set('limit', String(limit));
+  params.set('offset', String(offset));
+  return getJSON<Page<Job>>(`/api/v1/jobs/search?${params.toString()}`);
+}
+
+/**
+ * Per-value facet counts for the same filter query, used by the Filters screen's
+ * live "Show N jobs" total and its data-driven country list. `disjunctive=1`
+ * makes each facet's counts ignore its own selection, so sibling values still
+ * show counts. Missing sections are normalized to `{}`.
+ */
+export async function facetCounts(query: string): Promise<FacetCounts> {
+  const params = new URLSearchParams(query);
+  params.set('disjunctive', '1');
+  const { data } = await getJSON<{ data: FacetCounts }>(`/api/v1/jobs/facets?${params.toString()}`);
+  return { total: data.total ?? 0, facets: data.facets ?? {}, stats: data.stats ?? {} };
 }
 
 /**

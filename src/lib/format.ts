@@ -215,6 +215,26 @@ export function formatDate(ts: string | null | undefined): string {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+// --- Facet value labels (for the filter screen) -----------------------------
+
+/** The label map for each filterable facet param — reuses the same vocabularies
+ *  the detail view already maps. `countries` is handled specially (ISO2 → upper). */
+const FACET_LABEL_MAPS: Record<string, Record<string, string>> = {
+  work_mode: WORK_MODE_LABELS,
+  employment_type: EMPLOYMENT_LABELS,
+  seniority: SENIORITY_LABELS,
+  regions: REGION_LABELS,
+  category: CATEGORY_LABELS,
+};
+
+/** Display label for a facet value code, e.g. facetValueLabel('seniority',
+ *  'c_level') → 'C-level'. Unknown params/codes fall back to a humanized form. */
+export function facetValueLabel(param: string, value: string): string {
+  if (param === 'countries') return value.toUpperCase();
+  const map = FACET_LABEL_MAPS[param];
+  return map ? label(map, value) : humanize(value);
+}
+
 /** A metadata row in the detail sidebar: one label with one or more values. */
 export type Facet = { label: string; values: string[] };
 

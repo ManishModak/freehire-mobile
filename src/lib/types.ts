@@ -74,3 +74,16 @@ export type Page<T> = {
     total: number;
   };
 };
+
+/**
+ * The facets endpoint's payload: an estimated matching `total`, per-value counts
+ * keyed by the same param name used to filter (`facets.regions.eu = 1234`), and
+ * numeric ranges for slider facets. `facets`/`stats` may be absent — the client
+ * normalizes them to `{}`. Drives the live "Show N jobs" count and the
+ * data-driven country options.
+ */
+export type FacetCounts = {
+  total: number;
+  facets: Record<string, Record<string, number>>;
+  stats: Record<string, { min: number; max: number }>;
+};
