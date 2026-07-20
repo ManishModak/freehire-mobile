@@ -1,98 +1,153 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useMemo } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BrandMark } from '@/components/BrandMark';
+import { JobCard } from '@/components/JobCard';
+import { getColors, Space } from '@/constants/freehire';
+import { useJobsFeed } from '@/lib/useJobsFeed';
+import type { Job } from '@/lib/types';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+export default function FeedScreen() {
+  const c = getColors(useColorScheme());
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useJobsFeed();
+
+  // Flatten the paged envelope into one job array for the list. The total (there
+  // are millions) rides along for the header count.
+  const jobs = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const total = data?.pages[0]?.meta.total ?? 0;
+
+  const header = (
+    <View style={styles.header}>
+      {/* Original freehire lockup: the ring-and-diamond mark beside the monochrome
+          wordmark, both tracking the theme foreground (matches web TopBar). */}
+      <View style={styles.brand}>
+        <BrandMark size={26} color={c.foreground} />
+        <Text style={[styles.wordmark, { color: c.foreground }]}>freehire</Text>
+      </View>
+      <Text style={[styles.tagline, { color: c.mutedForeground }]}>
+        {total > 0
+          ? `${total.toLocaleString('en-US')} open jobs · no login, no noise`
+          : 'Fresh jobs from every board'}
+      </Text>
+    </View>
+  );
+
+  // Initial load: a centered spinner rather than an empty list flash.
+  if (isLoading) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <SafeAreaView style={[styles.fill, styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator color={c.brand} />
+      </SafeAreaView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
+  // Hard failure on the first page — offer the wordmark plus the reason.
+  if (isError && jobs.length === 0) {
+    return (
+      <SafeAreaView
+        edges={['top']}
+        style={[styles.fill, styles.center, { backgroundColor: c.background }]}>
+        {header}
+        <Text style={[styles.errorText, { color: c.mutedForeground }]}>
+          Couldn’t load jobs.{'\n'}
+          {(error as Error)?.message ?? 'Please try again.'}
+        </Text>
+        <Text onPress={() => refetch()} style={[styles.retry, { color: c.brand }]}>
+          Tap to retry
+        </Text>
       </SafeAreaView>
-    </ThemedView>
+    );
+  }
+
+  return (
+    <SafeAreaView edges={['top']} style={[styles.fill, { backgroundColor: c.background }]}>
+      <FlashList<Job>
+        data={jobs}
+        keyExtractor={(job) => job.public_slug}
+        renderItem={({ item }) => <JobCard job={item} />}
+        ListHeaderComponent={header}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={{ height: Space.md }} />}
+        // Load the next page a screenful before the end so scrolling stays smooth.
+        onEndReachedThreshold={0.6}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching && !isFetchingNextPage}
+            onRefresh={refetch}
+            tintColor={c.brand}
+            colors={[c.brand]}
+          />
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footer}>
+              <ActivityIndicator color={c.brand} />
+            </View>
+          ) : null
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  fill: { flex: 1 },
+  center: { alignItems: 'center', justifyContent: 'center', gap: Space.md },
+  listContent: {
+    paddingHorizontal: Space.lg,
+    paddingBottom: Space.xl,
+  },
+  header: {
+    paddingTop: Space.sm,
+    paddingBottom: Space.lg,
+    gap: 4,
+  },
+  brand: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: Space.sm,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  wordmark: {
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.6,
   },
-  title: {
+  tagline: {
+    fontSize: 13,
+  },
+  footer: {
+    paddingVertical: Space.lg,
+  },
+  errorText: {
     textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: Space.xl,
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  retry: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

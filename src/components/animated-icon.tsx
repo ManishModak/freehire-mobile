@@ -5,6 +5,8 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { BrandMark } from '@/components/BrandMark';
+
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
 
@@ -33,7 +35,10 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  // The freehire brand mark, white on the dark splash — the loading screen the
+  // user sees while the JS bundle boots (works in Expo Go, unlike the native
+  // splash config in app.json which only applies to a real build).
+  const image = <BrandMark size={104} color="#fafafa" />;
 
   return animate ? (
     <Animated.View
@@ -140,7 +145,7 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#0a0a0a',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
