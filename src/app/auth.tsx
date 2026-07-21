@@ -15,10 +15,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authMessage, ApiError } from '@/lib/api';
-import { useAuth } from '@/lib/authStore';
+import { useAuth, useOAuthProviders } from '@/lib/authStore';
 import { getColors, Radius, Space } from '@/constants/freehire';
 
 type Mode = 'login' | 'register';
+
+/** Provider display names; unknown slugs fall back to a capitalized form. */
+const PROVIDER_LABELS: Record<string, string> = {
+  github: 'GitHub',
+  google: 'Google',
+  linkedin: 'LinkedIn',
+};
+
+function providerLabel(p: string): string {
+  return PROVIDER_LABELS[p] ?? p.charAt(0).toUpperCase() + p.slice(1);
+}
 
 /**
  * The sign-in / sign-up modal. A segmented toggle switches between logging in
@@ -29,16 +40,33 @@ type Mode = 'login' | 'register';
  */
 export default function AuthScreen() {
   const c = getColors(useColorScheme());
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithProvider } = useAuth();
+  const providers = useOAuthProviders();
 
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState<string | null>(null);
+
+  const disabled = busy || oauthBusy != null;
+
+  async function onProvider(provider: string) {
+    if (disabled) return;
+    setOauthBusy(provider);
+    setError(null);
+    try {
+      if (await signInWithProvider(provider)) router.back(); // stay open if cancelled
+    } catch {
+      setError(`Couldn’t sign in with ${providerLabel(provider)}. Please try again.`);
+    } finally {
+      setOauthBusy(null);
+    }
+  }
 
   const isRegister = mode === 'register';
-  const canSubmit = email.trim().length > 0 && password.length > 0 && !busy;
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !disabled;
 
   async function submit() {
     if (!canSubmit) return;
@@ -77,6 +105,40 @@ export default function AuthScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.fill}>
         <View style={styles.body}>
+          {/* Social sign-in, when the backend advertises providers. Cancelling a
+              provider flow is a silent no-op; only real failures show an error. */}
+          {providers.length > 0 ? (
+            <View style={styles.social}>
+              <View style={styles.providers}>
+                {providers.map((p) => (
+                  <Pressable
+                    key={p}
+                    onPress={() => onProvider(p)}
+                    disabled={disabled}
+                    style={({ pressed }) => [
+                      styles.providerBtn,
+                      { borderColor: c.border, backgroundColor: c.card },
+                      disabled && { opacity: 0.6 },
+                      pressed && { opacity: 0.7 },
+                    ]}>
+                    {oauthBusy === p ? (
+                      <ActivityIndicator color={c.foreground} />
+                    ) : (
+                      <Text style={[styles.providerText, { color: c.foreground }]}>
+                        Continue with {providerLabel(p)}
+                      </Text>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.divider}>
+                <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+                <Text style={[styles.dividerText, { color: c.mutedForeground }]}>or</Text>
+                <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
+              </View>
+            </View>
+          ) : null}
+
           {/* Login / Register segmented toggle. */}
           <View style={[styles.segment, { backgroundColor: c.muted }]}>
             {(['login', 'register'] as const).map((m) => {
@@ -167,6 +229,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: Space.lg,
     paddingTop: Space.sm,
     gap: Space.xl,
+  },
+  social: {
+    gap: Space.md,
+  },
+  providers: {
+    gap: Space.sm,
+  },
+  providerBtn: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  providerText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    fontSize: 13,
   },
   segment: {
     flexDirection: 'row',
