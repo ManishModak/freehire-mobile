@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProviderIcon } from '@/components/ProviderIcon';
 import { authMessage, ApiError } from '@/lib/api';
 import { useAuth, useOAuthProviders } from '@/lib/authStore';
 import { getColors, Radius, Space } from '@/constants/freehire';
@@ -124,9 +125,12 @@ export default function AuthScreen() {
                     {oauthBusy === p ? (
                       <ActivityIndicator color={c.foreground} />
                     ) : (
-                      <Text style={[styles.providerText, { color: c.foreground }]}>
-                        Continue with {providerLabel(p)}
-                      </Text>
+                      <View style={styles.providerContent}>
+                        <ProviderIcon provider={p} size={18} color={c.foreground} />
+                        <Text style={[styles.providerText, { color: c.foreground }]}>
+                          Continue with {providerLabel(p)}
+                        </Text>
+                      </View>
                     )}
                   </Pressable>
                 ))}
@@ -242,6 +246,11 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  providerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.sm,
   },
   providerText: {
     fontSize: 15,
