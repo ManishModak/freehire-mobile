@@ -65,6 +65,23 @@ export type Job = {
   enrichment?: Enrichment | null;
 };
 
+/** The authenticated account, as returned by register/login/me. The password
+ *  hash never crosses the wire; `role` is a UI affordance the server re-checks. */
+export type User = {
+  id: number;
+  email: string;
+  role: string;
+  beta_tester: boolean;
+  created_at?: string | null;
+};
+
+/** A user's interaction with one job. Returned by the save endpoints; `saved_at`
+ *  is set when saved and null once cleared. */
+export type UserJob = {
+  saved_at: string | null;
+  applied_at: string | null;
+};
+
 /** The list envelope every paginated read returns. */
 export type Page<T> = {
   data: T[];

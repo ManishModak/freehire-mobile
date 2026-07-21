@@ -32,6 +32,7 @@ function BackButton({ color }: { color: string }) {
 import { CompanyLogo } from '@/components/CompanyLogo';
 import { JobDescription } from '@/components/JobDescription';
 import { RealityBadge } from '@/components/RealityBadge';
+import { SaveButton } from '@/components/SaveButton';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { formatDate, formatSalary, summaryFacets } from '@/lib/format';
 import { useJob } from '@/lib/useJob';
@@ -101,6 +102,7 @@ export default function JobDetailScreen() {
             {job.company || 'Unknown company'}
           </Text>
         </View>
+        <SaveButton slug={job.public_slug} size={24} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Title hero. */}

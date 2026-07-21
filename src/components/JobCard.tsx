@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 import { CompanyLogo } from '@/components/CompanyLogo';
+import { SaveButton } from '@/components/SaveButton';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { blurb, cardTags, formatSalary, timeAgo } from '@/lib/format';
 import type { Job } from '@/lib/types';
@@ -54,6 +55,7 @@ export const JobCard = memo(function JobCard({ job }: { job: Job }) {
         {posted ? (
           <Text style={[styles.posted, { color: c.mutedForeground }]}>{posted}</Text>
         ) : null}
+        <SaveButton slug={job.public_slug} size={20} />
       </View>
 
       {/* The title is the card's hero — a size up with tight leading. */}

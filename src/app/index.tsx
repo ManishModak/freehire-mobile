@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { JobCard } from '@/components/JobCard';
 import { getColors, Radius, Space } from '@/constants/freehire';
+import { useAuth } from '@/lib/authStore';
 import { useFilters } from '@/lib/filterStore';
 import { activeFilterCount, emptyFilters } from '@/lib/jobFilters';
 import type { Job } from '@/lib/types';
@@ -24,6 +25,7 @@ import { useJobSearch } from '@/lib/useJobSearch';
 export default function FeedScreen() {
   const c = getColors(useColorScheme());
   const { filters, appliedQuery, setQuery, apply } = useFilters();
+  const { user } = useAuth();
   const {
     data,
     isLoading,
@@ -50,36 +52,54 @@ export default function FeedScreen() {
   // lives inside the field (trailing), and the result count sits just beneath.
   const top = (
     <View style={styles.top}>
-      <View style={[styles.search, { backgroundColor: c.card, borderColor: c.border }]}>
-        <SymbolView name="magnifyingglass" size={17} tintColor={c.mutedForeground} />
-        <TextInput
-          value={filters.q}
-          onChangeText={setQuery}
-          placeholder="Search jobs…"
-          placeholderTextColor={c.mutedForeground}
-          style={[styles.searchInput, { color: c.foreground }]}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-        />
-        <Pressable
-          onPress={() => router.push('/filters')}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.filtersInInput,
-            { borderLeftColor: c.border },
-            pressed && { opacity: 0.6 },
-          ]}>
-          <SymbolView
-            name="slider.horizontal.3"
-            size={18}
-            tintColor={activeCount > 0 ? c.brandStrong : c.foreground}
+      {/* Search and the account entry share one row — the field flexes and ends
+          just before the avatar. Signed out the avatar opens the auth modal;
+          signed in, the account screen. */}
+      <View style={styles.searchRow}>
+        <View style={[styles.search, { backgroundColor: c.card, borderColor: c.border }]}>
+          <SymbolView name="magnifyingglass" size={17} tintColor={c.mutedForeground} />
+          <TextInput
+            value={filters.q}
+            onChangeText={setQuery}
+            placeholder="Search jobs…"
+            placeholderTextColor={c.mutedForeground}
+            style={[styles.searchInput, { color: c.foreground }]}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
           />
-          {activeCount > 0 ? (
-            <View style={[styles.badge, { backgroundColor: c.brand }]}>
-              <Text style={[styles.badgeText, { color: c.brandForeground }]}>{activeCount}</Text>
-            </View>
-          ) : null}
+          <Pressable
+            onPress={() => router.push('/filters')}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.filtersInInput,
+              { borderLeftColor: c.border },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <SymbolView
+              name="slider.horizontal.3"
+              size={18}
+              tintColor={activeCount > 0 ? c.brandStrong : c.foreground}
+            />
+            {activeCount > 0 ? (
+              <View style={[styles.badge, { backgroundColor: c.brand }]}>
+                <Text style={[styles.badgeText, { color: c.brandForeground }]}>{activeCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={() => router.push(user ? '/account' : '/auth')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={user ? 'Account' : 'Sign in'}
+          style={({ pressed }) => [styles.account, pressed && { opacity: 0.6 }]}>
+          <SymbolView
+            name={user ? 'person.crop.circle.fill' : 'person.crop.circle'}
+            size={30}
+            tintColor={user ? c.brandStrong : c.foreground}
+          />
         </Pressable>
       </View>
       {total > 0 ? (
@@ -173,7 +193,16 @@ const styles = StyleSheet.create({
     paddingBottom: Space.sm,
     gap: Space.sm,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.sm,
+  },
+  account: {
+    padding: 2,
+  },
   search: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Space.sm,

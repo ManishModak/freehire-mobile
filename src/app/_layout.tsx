@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { getColors } from '@/constants/freehire';
+import { AuthProvider } from '@/lib/authStore';
 import { FilterProvider } from '@/lib/filterStore';
 
 SplashScreen.preventAutoHideAsync();
@@ -28,25 +29,29 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
-        {/* FilterProvider wraps the whole Stack so the feed and the Filters
-            modal share one filter state. */}
-        <FilterProvider>
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: c.background },
-              headerTintColor: c.brandStrong,
-              headerTitleStyle: { color: c.foreground },
-              contentStyle: { backgroundColor: c.background },
-            }}>
-            {/* The feed is the app's single root screen (no bottom tab bar). */}
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            {/* No native header — the detail screen draws its own compact back
-                chevron so the empty header bar never eats vertical space. */}
-            <Stack.Screen name="jobs/[slug]" options={{ headerShown: false }} />
-            {/* The Filters screen presents as a modal over the feed. */}
-            <Stack.Screen name="filters" options={{ headerShown: false, presentation: 'modal' }} />
-          </Stack>
-        </FilterProvider>
+        {/* Auth + Filter state wrap the whole Stack so every screen (feed,
+            detail, and the auth/filters modals) shares one source of truth. */}
+        <AuthProvider>
+          <FilterProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: c.background },
+                headerTintColor: c.brandStrong,
+                headerTitleStyle: { color: c.foreground },
+                contentStyle: { backgroundColor: c.background },
+              }}>
+              {/* The feed is the app's single root screen (no bottom tab bar). */}
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              {/* No native header — the detail screen draws its own compact back
+                  chevron so the empty header bar never eats vertical space. */}
+              <Stack.Screen name="jobs/[slug]" options={{ headerShown: false }} />
+              {/* Filters, auth, and account all present as modals over the feed. */}
+              <Stack.Screen name="filters" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="account" options={{ headerShown: false, presentation: 'modal' }} />
+            </Stack>
+          </FilterProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
