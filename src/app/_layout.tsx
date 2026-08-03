@@ -1,10 +1,12 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { getColors } from '@/constants/freehire';
+import { AuthProvider } from '@/lib/authStore';
+import { FilterProvider } from '@/lib/filterStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,13 +18,40 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const c = getColors(colorScheme);
+
+  // Root Stack. The `(tabs)` group owns the tab bar and renders headerless; the
+  // job-detail screen pushes over it with a native back button, tinted to match
+  // the freehire palette so the header reads as part of the app, not chrome.
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
-        <AppTabs />
+        {/* Auth + Filter state wrap the whole Stack so every screen (feed,
+            detail, and the auth/filters modals) shares one source of truth. */}
+        <AuthProvider>
+          <FilterProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: c.background },
+                headerTintColor: c.brandStrong,
+                headerTitleStyle: { color: c.foreground },
+                contentStyle: { backgroundColor: c.background },
+              }}>
+              {/* The feed is the app's single root screen (no bottom tab bar). */}
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              {/* No native header — the detail screen draws its own compact back
+                  chevron so the empty header bar never eats vertical space. */}
+              <Stack.Screen name="jobs/[slug]" options={{ headerShown: false }} />
+              {/* Filters, auth, and account all present as modals over the feed. */}
+              <Stack.Screen name="filters" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="account" options={{ headerShown: false, presentation: 'modal' }} />
+            </Stack>
+          </FilterProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

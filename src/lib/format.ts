@@ -29,6 +29,49 @@ const EMPLOYMENT_LABELS: Record<string, string> = {
 const WORK_MODE_LABELS: Record<string, string> = { onsite: 'On-site' };
 const SENIORITY_LABELS: Record<string, string> = { c_level: 'C-level' };
 
+// Facet label maps ported from hire/web/src/lib/labels.ts + enrichment.ts — only
+// the codes whose label differs from the humanized fallback are listed.
+const CATEGORY_LABELS: Record<string, string> = {
+  ml_ai: 'ML / AI',
+  ai_engineering: 'AI Engineer',
+  data_engineering: 'Data Engineering',
+  data_science: 'Data Science',
+  data_analytics: 'Data Analytics',
+  qa: 'QA',
+  devops: 'DevOps',
+  sre: 'SRE',
+  project_management: 'Project Management',
+};
+
+const DOMAIN_LABELS: Record<string, string> = {
+  fintech: 'FinTech',
+  ecommerce: 'E-commerce',
+  saas: 'SaaS',
+  gamedev: 'GameDev',
+  edtech: 'EdTech',
+  adtech: 'AdTech',
+  govtech: 'GovTech',
+  healthcare: 'Healthcare',
+};
+
+const COMPANY_TYPE_LABELS: Record<string, string> = { inhouse: 'In-house' };
+
+const RELOCATION_LABELS: Record<string, string> = {
+  not_supported: 'Not supported',
+  supported: 'Supported',
+  required: 'Required',
+};
+
+const ENGLISH_LABELS: Record<string, string> = {
+  a1: 'A1',
+  a2: 'A2',
+  b1: 'B1',
+  b2: 'B2',
+  c1: 'C1',
+  c2: 'C2',
+  native: 'Native',
+};
+
 const CURRENCY_SYMBOL: Record<string, string> = { USD: '$', EUR: '€', GBP: '£' };
 const PERIOD_SUFFIX: Record<string, string> = {
   month: ' / mo',
@@ -156,4 +199,79 @@ export function blurb(job: Job, max = 160): string | null {
   const cut = text.slice(0, max);
   const lastSpace = cut.lastIndexOf(' ');
   return `${cut.slice(0, lastSpace > 40 ? lastSpace : max)}…`;
+}
+
+// --- Detail: long date + facet list -----------------------------------------
+
+/**
+ * The detail screen's "Posted …" line: the full local date ("Jul 20, 2026"),
+ * not the card's compact "3d". Mirrors the web's formatDate. "" for a
+ * missing/invalid timestamp so the caller can skip the line entirely.
+ */
+export function formatDate(ts: string | null | undefined): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// --- Facet value labels (for the filter screen) -----------------------------
+
+/** The label map for each filterable facet param — reuses the same vocabularies
+ *  the detail view already maps. `countries` is handled specially (ISO2 → upper). */
+const FACET_LABEL_MAPS: Record<string, Record<string, string>> = {
+  work_mode: WORK_MODE_LABELS,
+  employment_type: EMPLOYMENT_LABELS,
+  seniority: SENIORITY_LABELS,
+  regions: REGION_LABELS,
+  category: CATEGORY_LABELS,
+};
+
+/** Display label for a facet value code, e.g. facetValueLabel('seniority',
+ *  'c_level') → 'C-level'. Unknown params/codes fall back to a humanized form. */
+export function facetValueLabel(param: string, value: string): string {
+  if (param === 'countries') return value.toUpperCase();
+  const map = FACET_LABEL_MAPS[param];
+  return map ? label(map, value) : humanize(value);
+}
+
+/** A metadata row in the detail sidebar: one label with one or more values. */
+export type Facet = { label: string; values: string[] };
+
+/**
+ * The detail screen's facet list — a port of the web's summaryFacets, minus the
+ * filter links (the mobile app has no filter screen yet, so values are plain
+ * text). Same order and label vocabulary as the web so a job reads identically.
+ * Absent facets are skipped, so a sparse job shows a shorter list rather than
+ * empty rows.
+ */
+export function summaryFacets(job: Job): Facet[] {
+  const e = job.enrichment ?? {};
+  const facets: Facet[] = [];
+
+  const one = (name: string, text: string | null | undefined) => {
+    if (text) facets.push({ label: name, values: [text] });
+  };
+  const many = (name: string, values: string[] | undefined) => {
+    if (values?.length) facets.push({ label: name, values });
+  };
+
+  one('Work format', job.work_mode ? label(WORK_MODE_LABELS, job.work_mode) : null);
+  one('Location', job.location);
+  many('Region', job.regions?.map((r) => label(REGION_LABELS, r)));
+  one('Work type', e.employment_type ? label(EMPLOYMENT_LABELS, e.employment_type) : null);
+  one('Grade', e.seniority ? label(SENIORITY_LABELS, e.seniority) : null);
+  one('Experience', e.experience_years_min != null ? `${e.experience_years_min}+ yrs` : null);
+  // english_level carries a 'none' sentinel that must not render as a facet.
+  const english = e.english_level && e.english_level !== 'none' ? e.english_level : null;
+  one('English', english ? label(ENGLISH_LABELS, english) : null);
+  one('Category', e.category ? label(CATEGORY_LABELS, e.category) : null);
+  many('Country', job.countries?.map((c) => c.toUpperCase()));
+  one('Relocation', e.relocation ? label(RELOCATION_LABELS, e.relocation) : null);
+  if (e.visa_sponsorship === true) facets.push({ label: 'Visa', values: ['Sponsored'] });
+  one('Company', e.company_type ? label(COMPANY_TYPE_LABELS, e.company_type) : null);
+  one('Size', e.company_size);
+  many('Domains', e.domains?.map((d) => label(DOMAIN_LABELS, d)));
+
+  return facets;
 }

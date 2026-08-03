@@ -1,8 +1,9 @@
-import * as WebBrowser from 'expo-web-browser';
+import { router } from 'expo-router';
 import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
 
 import { CompanyLogo } from '@/components/CompanyLogo';
+import { SaveButton } from '@/components/SaveButton';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { blurb, cardTags, formatSalary, timeAgo } from '@/lib/format';
 import type { Job } from '@/lib/types';
@@ -11,10 +12,10 @@ const MAX_SKILLS = 5;
 
 /**
  * Single source of truth for how a job appears in the feed — the mobile port of
- * the web's JobRow. The whole card is pressable: tapping opens the original
- * posting in an in-app browser (there's no detail screen yet). Layout follows the
- * design's reading order: company rail → title hero → facet chips → blurb →
- * skills + salary.
+ * the web's JobRow. The whole card is pressable: tapping pushes the job-detail
+ * screen (`/jobs/[slug]`), where the "Show" CTA opens the original posting.
+ * Layout follows the design's reading order: company rail → title hero → facet
+ * chips → blurb → skills + salary.
  *
  * Wrapped in `memo` because the feed re-renders on every page append; a card only
  * needs to re-render when its `job` identity changes.
@@ -32,7 +33,7 @@ export const JobCard = memo(function JobCard({ job }: { job: Job }) {
   const extraSkills = skills.length - MAX_SKILLS;
 
   function open() {
-    if (job.url) WebBrowser.openBrowserAsync(job.url);
+    router.push(`/jobs/${job.public_slug}`);
   }
 
   return (
@@ -54,6 +55,7 @@ export const JobCard = memo(function JobCard({ job }: { job: Job }) {
         {posted ? (
           <Text style={[styles.posted, { color: c.mutedForeground }]}>{posted}</Text>
         ) : null}
+        <SaveButton slug={job.public_slug} size={20} />
       </View>
 
       {/* The title is the card's hero — a size up with tight leading. */}
