@@ -108,6 +108,34 @@ export async function me(): Promise<User> {
   return data;
 }
 
+// --- OAuth (social sign-in) -------------------------------------------------
+
+/** The provider flow's entry URL, tagged `platform=mobile` so the backend
+ *  finishes by redirecting to our custom scheme with a one-time code instead of
+ *  setting a cookie + web redirect. */
+export function oauthStartUrl(provider: string): string {
+  return `${API_BASE}/api/v1/auth/oauth/${provider}/start?platform=mobile`;
+}
+
+/** The providers the backend has configured (e.g. github/google/linkedin).
+ *  Public; callers treat a failure as "no providers". */
+export async function oauthProviders(): Promise<string[]> {
+  const { data } = await send<{ data: string[] }>('/api/v1/auth/oauth/providers', { method: 'GET' });
+  return data ?? [];
+}
+
+/** Exchange the one-time code from the OAuth callback deep link for a session.
+ *  The response sets the `hire_token` cookie — and because THIS app makes the
+ *  request, that cookie lands in the app's jar (unlike the browser flow's). A
+ *  bad/expired/used code is a 401 `ApiError`. */
+export async function exchangeOAuth(code: string): Promise<User> {
+  const { data } = await send<{ data: User }>('/api/v1/auth/oauth/exchange', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+  return data;
+}
+
 // --- Saved jobs (session-scoped) --------------------------------------------
 
 /** Mark a job saved (bookmark). Returns the updated interaction. */
