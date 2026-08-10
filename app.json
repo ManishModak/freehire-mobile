@@ -11,9 +11,11 @@
       "icon": {
         "light": "./assets/images/freehire-icon-light.png",
         "dark": "./assets/images/freehire-icon-dark.png"
-      }
+      },
+      "bundleIdentifier": "me.freehire.mobile"
     },
     "android": {
+      "package": "me.freehire.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/freehire-icon-light.png",
@@ -44,6 +46,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "399c136d-96e9-4e2b-bf43-81a4eb00d8a9"
+      }
+    },
+    "owner": "freehire-team"
   }
 }
