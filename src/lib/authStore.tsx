@@ -12,6 +12,7 @@ import {
   register as apiRegister,
 } from './api';
 import { codeFromCallbackUrl } from './oauth';
+import { unregisterThisDevice } from './push';
 import type { User } from './types';
 
 /** The custom scheme the backend redirects to at the end of the mobile OAuth
@@ -95,11 +96,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
+      // Before the session goes: this device must stop receiving the departing
+      // user's notifications. It has to happen first — the call is
+      // cookie-authenticated, so after logout there is nothing to authorize it.
+      await unregisterThisDevice();
       await apiLogout();
     } finally {
       // Clear locally even if the network call failed — the intent is to sign out.
       setUser(null);
       qc.removeQueries({ queryKey: ['saved'] });
+      qc.removeQueries({ queryKey: ['push'] });
     }
   }, [qc]);
 
