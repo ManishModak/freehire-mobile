@@ -1,0 +1,39 @@
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+
+import { getNotifications } from './api';
+import { useAuth } from './authStore';
+
+const PAGE_SIZE = 20;
+
+/**
+ * The bell icon's badge count. A 1-row page is enough — only
+ * `meta.unread_count` is read, so this is as cheap as the list endpoint
+ * itself gets. Disabled when signed out (there is nothing to badge).
+ */
+export function useUnreadCount() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: async () => (await getNotifications(1, 0)).meta.unread_count,
+    enabled: !!user,
+  });
+}
+
+/**
+ * The notification-center screen's paginated list, newest first. Pagination
+ * walks `offset` forward until we pass `meta.total`, same shape as
+ * `useJobSearch`.
+ */
+export function useNotifications() {
+  const { user } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['notifications', 'list'],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => getNotifications(PAGE_SIZE, pageParam),
+    getNextPageParam: (lastPage) => {
+      const loaded = lastPage.meta.offset + lastPage.data.length;
+      return loaded < lastPage.meta.total ? loaded : undefined;
+    },
+    enabled: !!user,
+  });
+}

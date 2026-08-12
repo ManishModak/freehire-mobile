@@ -140,6 +140,37 @@ export type Page<T> = {
 };
 
 /**
+ * One row in the notification center — a durable, readable-by-the-owner
+ * record of a delivery event from the digest/reminder/nudge engines,
+ * independent of which channel(s) carried it. `public_slug` is null when the
+ * event concerns no single job (e.g. a multi-job subscription digest), so a
+ * card with no slug has no navigation target. `read_at` is null until the
+ * user marks it read (opening the list does not mark anything read).
+ */
+export type NotificationItem = {
+  id: number;
+  kind: string; // "subscription_digest" | "reminder" | "nudge_follow_up" | "nudge_interview_prep" | "nudge_job_closed"
+  title: string;
+  body: string;
+  public_slug: string | null;
+  created_at: string;
+  read_at: string | null;
+};
+
+/** The notification list envelope: `Page<NotificationItem>` plus the caller's
+ *  total unread count, cheap to include (one `COUNT(*) FILTER` on the same
+ *  query the page already runs) — see `GET /me/notifications`. */
+export type NotificationsPage = {
+  data: NotificationItem[];
+  meta: {
+    limit: number;
+    offset: number;
+    total: number;
+    unread_count: number;
+  };
+};
+
+/**
  * The facets endpoint's payload: an estimated matching `total`, per-value counts
  * keyed by the same param name used to filter (`facets.regions.eu = 1234`), and
  * numeric ranges for slider facets. `facets`/`stats` may be absent — the client

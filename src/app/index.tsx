@@ -21,11 +21,13 @@ import { useFilters } from '@/lib/filterStore';
 import { activeFilterCount, emptyFilters } from '@/lib/jobFilters';
 import type { Job } from '@/lib/types';
 import { useJobSearch } from '@/lib/useJobSearch';
+import { useUnreadCount } from '@/lib/useNotifications';
 
 export default function FeedScreen() {
   const c = getColors(useColorScheme());
   const { filters, appliedQuery, setQuery, apply } = useFilters();
   const { user } = useAuth();
+  const { data: unreadCount = 0 } = useUnreadCount();
   const {
     data,
     isLoading,
@@ -88,6 +90,27 @@ export default function FeedScreen() {
             ) : null}
           </Pressable>
         </View>
+
+        {/* Bell: signed in it opens the notification center; signed out it
+            gates through the same auth modal the account icon uses (the
+            list is session-scoped, so there is nothing to show yet). */}
+        <Pressable
+          onPress={() => router.push(user ? '/notifications' : '/auth')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          style={({ pressed }) => [styles.notifications, pressed && { opacity: 0.6 }]}>
+          <SymbolView
+            name={unreadCount > 0 ? 'bell.fill' : 'bell'}
+            size={24}
+            tintColor={unreadCount > 0 ? c.brandStrong : c.foreground}
+          />
+          {unreadCount > 0 ? (
+            <View style={[styles.badge, { backgroundColor: c.brand }]}>
+              <Text style={[styles.badgeText, { color: c.brandForeground }]}>{unreadCount}</Text>
+            </View>
+          ) : null}
+        </Pressable>
 
         <Pressable
           onPress={() => router.push(user ? '/profile' : '/auth')}
@@ -199,6 +222,12 @@ const styles = StyleSheet.create({
     gap: Space.sm,
   },
   account: {
+    padding: 2,
+  },
+  notifications: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     padding: 2,
   },
   search: {

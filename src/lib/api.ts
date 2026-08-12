@@ -5,7 +5,17 @@
  * endpoints, so the mobile feed and the website read identical data.
  */
 
-import type { FacetCounts, Job, Page, PushDevice, TestPushResult, User, UserJob, UserProfile } from './types';
+import type {
+  FacetCounts,
+  Job,
+  NotificationsPage,
+  Page,
+  PushDevice,
+  TestPushResult,
+  User,
+  UserJob,
+  UserProfile,
+} from './types';
 
 /** Production API. Public, unauthenticated reads — no key needed for the feed. */
 export const API_BASE = 'https://freehire.dev';
@@ -202,6 +212,34 @@ export async function unregisterPushToken(token: string): Promise<void> {
  *  happened per device (see `TestPushResult`). */
 export async function sendTestPush(): Promise<TestPushResult> {
   const { data } = await send<{ data: TestPushResult }>('/api/v1/me/push-tokens/test', {
+    method: 'POST',
+  });
+  return data;
+}
+
+// --- Notification center (session-scoped) -----------------------------------
+
+/** A page of the caller's notification-center rows, newest first, plus their
+ *  total unread count. `limit`/`offset` are optional — omitted, the backend
+ *  applies its own default page size starting at zero. */
+export async function getNotifications(limit?: number, offset?: number): Promise<NotificationsPage> {
+  const params = new URLSearchParams();
+  if (limit != null) params.set('limit', String(limit));
+  if (offset != null) params.set('offset', String(offset));
+  const qs = params.toString();
+  return send<NotificationsPage>(`/api/v1/me/notifications${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+/** Mark one notification read. Idempotent — repeating it on an already-read
+ *  notification is a no-op. Owner-scoped: another user's id 404s. Answers 204. */
+export async function markNotificationRead(id: number): Promise<void> {
+  await send<void>(`/api/v1/me/notifications/${id}/read`, { method: 'POST' });
+}
+
+/** Mark every one of the caller's unread notifications read in one call,
+ *  reporting how many were marked. */
+export async function markAllNotificationsRead(): Promise<{ marked: number }> {
+  const { data } = await send<{ data: { marked: number } }>('/api/v1/me/notifications/read-all', {
     method: 'POST',
   });
   return data;
