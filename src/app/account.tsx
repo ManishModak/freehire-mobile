@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/lib/authStore';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { formatDate } from '@/lib/format';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 /**
  * The account screen (modal) for a signed-in user: their email, a couple of
@@ -17,11 +18,25 @@ export default function AccountScreen() {
   const c = getColors(useColorScheme());
   const { user, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
+  const push = usePushNotifications();
+  // The outcome of the last test send. Kept separate from `push.error`: a test
+  // that reports "no device registered" is a successful call with bad news, not
+  // a failure, and the two read differently.
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   async function onSignOut() {
     setBusy(true);
     await signOut();
     router.back();
+  }
+
+  async function onTogglePush(next: boolean) {
+    setTestResult(null);
+    await (next ? push.enable() : push.disable());
+  }
+
+  async function onTestPush() {
+    setTestResult(await push.sendTest());
   }
 
   const joined = formatDate(user?.created_at);
@@ -55,6 +70,45 @@ export default function AccountScreen() {
           </View>
           {joined ? (
             <Text style={[styles.joined, { color: c.mutedForeground }]}>Joined {joined}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.settings}>
+          <View style={[styles.settingRow, { borderColor: c.border, backgroundColor: c.card }]}>
+            <View style={styles.settingText}>
+              <Text style={[styles.settingLabel, { color: c.foreground }]}>Push notifications</Text>
+              <Text style={[styles.settingHint, { color: c.mutedForeground }]}>
+                Alerts from freehire on this device.
+              </Text>
+            </View>
+            {push.busy ? (
+              <ActivityIndicator color={c.mutedForeground} />
+            ) : (
+              <Switch
+                value={push.enabled}
+                onValueChange={onTogglePush}
+                disabled={push.loading}
+                trackColor={{ true: c.brand, false: c.border }}
+              />
+            )}
+          </View>
+
+          {push.enabled ? (
+            <Pressable
+              onPress={onTestPush}
+              disabled={push.busy}
+              hitSlop={8}
+              style={({ pressed }) => pressed && { opacity: 0.5 }}>
+              <Text style={[styles.testLink, { color: c.brandStrong }]}>Send test notification</Text>
+            </Pressable>
+          ) : null}
+
+          {/* Error red matches the auth modal's — there is no palette token for it. */}
+          {(push.error ?? testResult) ? (
+            <Text
+              style={[styles.settingNote, { color: push.error ? '#dc2626' : c.mutedForeground }]}>
+              {push.error ?? testResult}
+            </Text>
           ) : null}
         </View>
 
@@ -122,6 +176,39 @@ const styles = StyleSheet.create({
   },
   joined: {
     fontSize: 13,
+  },
+  settings: {
+    gap: Space.sm,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Space.md,
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Space.md,
+    paddingVertical: Space.sm,
+  },
+  settingText: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingHint: {
+    fontSize: 13,
+  },
+  testLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    paddingHorizontal: Space.xs,
+  },
+  settingNote: {
+    fontSize: 13,
+    paddingHorizontal: Space.xs,
   },
   signOut: {
     borderWidth: 1,

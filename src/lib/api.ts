@@ -5,7 +5,7 @@
  * endpoints, so the mobile feed and the website read identical data.
  */
 
-import type { FacetCounts, Job, Page, User, UserJob } from './types';
+import type { FacetCounts, Job, Page, PushDevice, TestPushResult, User, UserJob } from './types';
 
 /** Production API. Public, unauthenticated reads — no key needed for the feed. */
 export const API_BASE = 'https://freehire.dev';
@@ -154,6 +154,49 @@ export async function unsaveJob(slug: string): Promise<UserJob> {
 export async function savedSlugs(): Promise<string[]> {
   const { data } = await send<{ data: string[] }>('/api/v1/me/tracking/saved', { method: 'GET' });
   return data ?? [];
+}
+
+// --- Push notifications (session-scoped) ------------------------------------
+
+/** Register (or refresh) this device's Expo push token. The backend upserts by
+ *  token, so a device that changes hands is reassigned to the caller rather than
+ *  duplicated. Answers 204. */
+export async function registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void> {
+  await send<void>('/api/v1/me/push-tokens', {
+    method: 'POST',
+    body: JSON.stringify({ token, platform }),
+  });
+}
+
+/** The caller's registered devices — the source of truth for whether push is on
+ *  for THIS device (there is no local copy of that state). */
+export async function listPushDevices(): Promise<PushDevice[]> {
+  const { data } = await send<{ data: PushDevice[] }>('/api/v1/me/push-tokens', { method: 'GET' });
+  return data ?? [];
+}
+
+/** Unregister this device. A 404 means the token was already gone (pruned as
+ *  dead, or claimed by another account) — that is the state we asked for, so it
+ *  is not an error to the caller. */
+export async function unregisterPushToken(token: string): Promise<void> {
+  try {
+    await send<void>('/api/v1/me/push-tokens', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return;
+    throw err;
+  }
+}
+
+/** Push a test notification to the caller's own devices, reporting what
+ *  happened per device (see `TestPushResult`). */
+export async function sendTestPush(): Promise<TestPushResult> {
+  const { data } = await send<{ data: TestPushResult }>('/api/v1/me/push-tokens/test', {
+    method: 'POST',
+  });
+  return data;
 }
 
 /**

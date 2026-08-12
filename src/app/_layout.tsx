@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useColorScheme } from 'react-native';
@@ -9,6 +10,19 @@ import { AuthProvider } from '@/lib/authStore';
 import { FilterProvider } from '@/lib/filterStore';
 
 SplashScreen.preventAutoHideAsync();
+
+// A push that lands while the app is open is still worth seeing, so it is shown
+// as a banner rather than swallowed. No sound and no badge: a job alert doesn't
+// warrant interrupting someone already reading the feed, and nothing in the app
+// clears a badge — setting one would strand a number on the icon forever.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 
 // One client for the app's lifetime. `staleTime` keeps the feed from refetching
 // the moment you switch tabs and back — job listings don't change second-to-second.

@@ -82,6 +82,30 @@ export type UserJob = {
   applied_at: string | null;
 };
 
+/** One device registered to receive push notifications. `token` is this app
+ *  install's Expo push token — the only field that identifies *which* device a
+ *  row is, and so the only way this app can recognize itself in the list. */
+export type PushDevice = {
+  token: string;
+  platform: string;
+  created_at: string | null;
+  last_seen_at: string | null;
+};
+
+/**
+ * What a test push actually did, per registered device. The four counts are the
+ * point: a `200` with `devices: 0` sent nothing, and `pruned` means the token
+ * was dead and the backend has just removed it — a successful call that
+ * delivered nothing and needs the user to re-register. `sent + pruned + failed`
+ * equals `devices`.
+ */
+export type TestPushResult = {
+  devices: number;
+  sent: number;
+  pruned: number;
+  failed: number;
+};
+
 /** The list envelope every paginated read returns. */
 export type Page<T> = {
   data: T[];
