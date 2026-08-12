@@ -5,7 +5,7 @@
  * endpoints, so the mobile feed and the website read identical data.
  */
 
-import type { FacetCounts, Job, Page, PushDevice, TestPushResult, User, UserJob } from './types';
+import type { FacetCounts, Job, Page, PushDevice, TestPushResult, User, UserJob, UserProfile } from './types';
 
 /** Production API. Public, unauthenticated reads — no key needed for the feed. */
 export const API_BASE = 'https://freehire.dev';
@@ -105,6 +105,14 @@ export async function logout(): Promise<void> {
 /** The current user, or throws `ApiError(401)` when signed out. */
 export async function me(): Promise<User> {
   const { data } = await send<{ data: User }>('/api/v1/auth/me', { method: 'GET' });
+  return data;
+}
+
+/** The signed-in user's saved profile, or null when they haven't saved one.
+ *  Powers the Filters screen's "Apply profile" button. Throws `ApiError(401)`
+ *  when signed out — callers gate this behind `useAuth().user`. */
+export async function getProfile(): Promise<UserProfile | null> {
+  const { data } = await send<{ data: UserProfile | null }>('/api/v1/me/profile', { method: 'GET' });
   return data;
 }
 

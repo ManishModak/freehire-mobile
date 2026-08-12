@@ -75,6 +75,29 @@ export type User = {
   created_at?: string | null;
 };
 
+/** "Where & how I want to work" — a deliberate subset of the server's
+ *  LocationPreferences (mirrors the web app's type of the same name): only the
+ *  parts `filtersFromProfile` reads. `base` is where the user LIVES (not
+ *  necessarily where they want the work); `relocation.open` gates whether its
+ *  targets count at all. */
+export type LocationPreferences = {
+  work_modes?: string[];
+  remote?: { regions?: string[]; countries?: string[] };
+  base?: { country?: string; city?: string };
+  relocation: { open: boolean; regions?: string[]; countries?: string[] };
+};
+
+/** The signed-in user's saved profile, as returned by `GET /api/v1/me/profile`
+ *  (null when they haven't saved one). A deliberate subset of the server's full
+ *  model — mobile has no profile-editing screen, so it only reads the fields
+ *  `filtersFromProfile` seeds the job filters from. */
+export type UserProfile = {
+  specializations: string[];
+  skills: string[];
+  excluded_skills: string[];
+  location_preferences: LocationPreferences | null;
+};
+
 /** A user's interaction with one job. Returned by the save endpoints; `saved_at`
  *  is set when saved and null once cleared. */
 export type UserJob = {
