@@ -106,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       qc.removeQueries({ queryKey: ['saved'] });
       qc.removeQueries({ queryKey: ['push'] });
+      qc.removeQueries({ queryKey: ['profile'] });
     }
   }, [qc]);
 
