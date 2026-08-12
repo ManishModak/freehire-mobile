@@ -115,3 +115,15 @@ export async function unregisterThisDevice(): Promise<void> {
     // Deliberately swallowed: see above.
   }
 }
+
+/**
+ * The job slug carried in a tapped push's deep-link data, or null when it has
+ * none. Only a push that concerns exactly one job (a reminder, a nudge, or a
+ * subscription digest with a single match) carries a slug — a digest with
+ * several matches carries none, and a tap on it should just foreground the
+ * app rather than guess which job to open.
+ */
+export function jobSlugFromResponse(response: Notifications.NotificationResponse): string | null {
+  const slug = response.notification.request.content.data?.slug;
+  return typeof slug === 'string' && slug.length > 0 ? slug : null;
+}

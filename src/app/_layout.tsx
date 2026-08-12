@@ -1,13 +1,15 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { getColors } from '@/constants/freehire';
 import { AuthProvider } from '@/lib/authStore';
 import { FilterProvider } from '@/lib/filterStore';
+import { jobSlugFromResponse } from '@/lib/push';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,9 +34,34 @@ const queryClient = new QueryClient({
   },
 });
 
+// A tapped push with a job slug in its data opens that job directly; one with
+// none (e.g. a subscription digest matching several jobs) just foregrounds the
+// app, which is the OS/expo-router default and needs no code here. Covers both
+// a tap while the app is already running (the listener) and a tap that cold-
+// starts the app (the one-time getLastNotificationResponseAsync check) —
+// otherwise the deep link would only work for half of how a push gets tapped.
+function useNotificationDeepLink() {
+  const router = useRouter();
+
+  useEffect(() => {
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      const slug = jobSlugFromResponse(response);
+      if (slug) router.push(`/jobs/${slug}`);
+    });
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const slug = jobSlugFromResponse(response);
+      if (slug) router.push(`/jobs/${slug}`);
+    });
+    return () => sub.remove();
+  }, [router]);
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const c = getColors(colorScheme);
+  useNotificationDeepLink();
 
   // Root Stack. The `(tabs)` group owns the tab bar and renders headerless; the
   // job-detail screen pushes over it with a native back button, tinted to match

@@ -1,4 +1,36 @@
-import { describeTestPush, isRegistered } from './push';
+import { describeTestPush, isRegistered, jobSlugFromResponse } from './push';
+
+function responseWithData(data: Record<string, unknown> | undefined) {
+  return {
+    notification: { request: { content: { data } } },
+  } as import('expo-notifications').NotificationResponse;
+}
+
+/**
+ * A tapped push carries a job slug in its data only when it concerns exactly
+ * one job (a reminder, a nudge, or a subscription digest with one match) — a
+ * digest with several matches carries none, and the tap should just foreground
+ * the app rather than guess which job to open.
+ */
+describe('jobSlugFromResponse', () => {
+  it('extracts the slug when present', () => {
+    expect(jobSlugFromResponse(responseWithData({ slug: 'acme-backend-engineer' }))).toBe(
+      'acme-backend-engineer',
+    );
+  });
+
+  it('is null when data has no slug', () => {
+    expect(jobSlugFromResponse(responseWithData({}))).toBeNull();
+  });
+
+  it('is null when data is undefined', () => {
+    expect(jobSlugFromResponse(responseWithData(undefined))).toBeNull();
+  });
+
+  it('is null when slug is not a string', () => {
+    expect(jobSlugFromResponse(responseWithData({ slug: 42 }))).toBeNull();
+  });
+});
 
 /**
  * The test-send endpoint answers with four counts, not a status: a 200 can mean
