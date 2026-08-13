@@ -1,4 +1,13 @@
-## ADDED Requirements
+# mobile-profile-view
+
+## Purpose
+
+Read-only display of the signed-in user's saved profile (specializations,
+skills, location preferences) on the mobile app's Profile screen
+(`/profile`), including its loading, empty, and error states. Editing the
+profile is out of scope — mobile only reads the profile the web app writes.
+
+## Requirements
 
 ### Requirement: Profile screen route
 The system SHALL expose the signed-in user's account/profile modal at the
@@ -43,6 +52,16 @@ erroring.
 - **WHEN** the signed-in user's saved profile is `null`
 - **THEN** the screen shows a message that no profile is saved yet, pointing
   to the web app to set one up
+
+### Requirement: Profile fetch error state
+When the saved-profile fetch fails, the profile screen SHALL show a distinct
+error message instead of the no-profile empty state, so a failed load is
+never presented as "no profile saved".
+
+#### Scenario: Profile fetch fails
+- **WHEN** the signed-in user's saved-profile fetch fails
+- **THEN** the screen shows an error message distinct from the no-profile
+  empty-state copy
 
 ### Requirement: Profile data loading state
 While the saved profile is loading, the profile screen SHALL show a loading
