@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Chip } from '@/components/Chip';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { useAuth } from '@/lib/authStore';
 import { useFilters } from '@/lib/filterStore';
@@ -23,10 +24,12 @@ import {
   filtersFromProfile,
   filtersToQuery,
   POSTED_WITHIN,
+  QUICK_FACET_PARAMS,
   setPostedWithin,
   toggleValue,
   type JobFilters,
 } from '@/lib/jobFilters';
+import { useDebounced } from '@/lib/useDebounced';
 import { useFacetCounts } from '@/lib/useJobSearch';
 import { useProfile } from '@/lib/useProfile';
 
@@ -36,16 +39,6 @@ const MAX_SKILLS = 30;
 // Stable reference so the `countries` useMemo below doesn't invalidate every
 // render while `counts` is still loading.
 const EMPTY_FACETS: Record<string, Record<string, number>> = {};
-
-/** Debounce a value so rapid staging taps don't refetch counts on every tap. */
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
 
 /**
  * The Filters screen — a full-screen modal that edits a STAGED copy of the
@@ -162,7 +155,9 @@ export default function FiltersScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardDismissMode="on-drag">
-        {FACETS.map((facet) => (
+        {/* QUICK_FACET_PARAMS live on the dedicated /filters/quick screen
+            (reached via the feed's region shortcut), not here. */}
+        {FACETS.filter((f) => !QUICK_FACET_PARAMS.includes(f.param)).map((facet) => (
           <View key={facet.param} style={styles.section}>
             <Text style={[styles.sectionLabel, { color: c.foreground }]}>{facet.label}</Text>
             <View style={styles.chips}>
@@ -304,42 +299,6 @@ export default function FiltersScreen() {
         </Pressable>
       </View>
     </SafeAreaView>
-  );
-}
-
-function Chip({
-  label,
-  count,
-  selected,
-  colors,
-  onPress,
-}: {
-  label: string;
-  count?: number;
-  selected: boolean;
-  colors: ReturnType<typeof getColors>;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        selected
-          ? { backgroundColor: colors.brandMuted, borderColor: colors.brand }
-          : { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && { opacity: 0.7 },
-      ]}>
-      <Text
-        style={[styles.chipText, { color: selected ? colors.brandStrong : colors.foreground }]}>
-        {label}
-      </Text>
-      {count != null ? (
-        <Text style={[styles.chipCount, { color: selected ? colors.brandStrong : colors.mutedForeground }]}>
-          {count.toLocaleString('en-US')}
-        </Text>
-      ) : null}
-    </Pressable>
   );
 }
 
