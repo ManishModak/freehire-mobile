@@ -16,21 +16,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { JobCard } from '@/components/JobCard';
 import { getColors, Radius, Space } from '@/constants/freehire';
-import { useAuth } from '@/lib/authStore';
 import { useDismissedJobs } from '@/lib/useDismissedJobs';
 import { useFilters } from '@/lib/filterStore';
-import { regionShortcutLabel } from '@/lib/format';
 import { activeFilterCount, emptyFilters } from '@/lib/jobFilters';
+import { TAB_BAR_HEIGHT } from '@/lib/tabBarVisibility';
+import { useTabBarVisibility } from '@/lib/tabBarStore';
 import type { Job } from '@/lib/types';
 import { useJobSearch } from '@/lib/useJobSearch';
-import { useUnreadCount } from '@/lib/useNotifications';
 
 export default function FeedScreen() {
   const c = getColors(useColorScheme());
   const { filters, appliedQuery, setQuery, apply } = useFilters();
-  const { user } = useAuth();
-  const { data: unreadCount = 0 } = useUnreadCount();
   const { isDismissed } = useDismissedJobs();
+  const { reportScrollY } = useTabBarVisibility();
   const {
     data,
     isLoading,
@@ -64,95 +62,54 @@ export default function FeedScreen() {
 
   // The pinned search bar stays put while the list scrolls. The Filters button
   // lives inside the field (trailing), and the result count sits just beneath.
+  // Notifications and profile live in the bottom tab bar, not this header.
   const top = (
     <View style={styles.top}>
-      {/* Search and the profile entry share one row — the field flexes and ends
-          just before the avatar. Signed out the avatar opens the auth modal;
-          signed in, the profile screen. */}
-      <View style={styles.searchRow}>
-        <View style={[styles.search, { backgroundColor: c.card, borderColor: c.border }]}>
-          <Pressable
-            onPress={() => router.push('/filters/quick')}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.regionInInput,
-              { borderRightColor: c.border },
-              pressed && { opacity: 0.6 },
-            ]}>
-            <SymbolView name="globe" size={17} tintColor={regionTint} />
-            <Text numberOfLines={1} style={[styles.regionLabel, { color: regionTint }]}>
-              {regionShortcutLabel(selectedRegions)}
-            </Text>
-          </Pressable>
-          <SymbolView name="magnifyingglass" size={17} tintColor={c.mutedForeground} />
-          <TextInput
-            value={filters.q}
-            onChangeText={setQuery}
-            placeholder="Search jobs…"
-            placeholderTextColor={c.mutedForeground}
-            style={[styles.searchInput, { color: c.foreground }]}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-          />
-          {filters.q.length > 0 ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={8}>
-              <SymbolView name="xmark.circle.fill" size={16} tintColor={c.mutedForeground} />
-            </Pressable>
-          ) : null}
-          <Pressable
-            onPress={() => router.push('/filters')}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.filtersInInput,
-              { borderLeftColor: c.border },
-              pressed && { opacity: 0.6 },
-            ]}>
-            <SymbolView
-              name="slider.horizontal.3"
-              size={18}
-              tintColor={activeCount > 0 ? c.brandStrong : c.foreground}
-            />
-            {activeCount > 0 ? (
-              <View style={[styles.badge, { backgroundColor: c.brand }]}>
-                <Text style={[styles.badgeText, { color: c.brandForeground }]}>{activeCount}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        </View>
-
-        {/* Bell: signed in it opens the notification center; signed out it
-            gates through the same auth modal the account icon uses (the
-            list is session-scoped, so there is nothing to show yet). */}
+      <View style={[styles.search, { backgroundColor: c.card, borderColor: c.border }]}>
         <Pressable
-          onPress={() => router.push(user ? '/notifications' : '/auth')}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-          style={({ pressed }) => [styles.notifications, pressed && { opacity: 0.6 }]}>
+          onPress={() => router.push('/filters/quick')}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.regionInInput,
+            { borderRightColor: c.border },
+            pressed && { opacity: 0.6 },
+          ]}>
+          <SymbolView name="globe" size={17} tintColor={regionTint} />
+        </Pressable>
+        <SymbolView name="magnifyingglass" size={17} tintColor={c.mutedForeground} />
+        <TextInput
+          value={filters.q}
+          onChangeText={setQuery}
+          placeholder="Search jobs…"
+          placeholderTextColor={c.mutedForeground}
+          style={[styles.searchInput, { color: c.foreground }]}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {filters.q.length > 0 ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={8}>
+            <SymbolView name="xmark.circle.fill" size={16} tintColor={c.mutedForeground} />
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={() => router.push('/filters')}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.filtersInInput,
+            { borderLeftColor: c.border },
+            pressed && { opacity: 0.6 },
+          ]}>
           <SymbolView
-            name={unreadCount > 0 ? 'bell.fill' : 'bell'}
-            size={24}
-            tintColor={unreadCount > 0 ? c.brandStrong : c.foreground}
+            name="slider.horizontal.3"
+            size={18}
+            tintColor={activeCount > 0 ? c.brandStrong : c.foreground}
           />
-          {unreadCount > 0 ? (
+          {activeCount > 0 ? (
             <View style={[styles.badge, { backgroundColor: c.brand }]}>
-              <Text style={[styles.badgeText, { color: c.brandForeground }]}>{unreadCount}</Text>
+              <Text style={[styles.badgeText, { color: c.brandForeground }]}>{activeCount}</Text>
             </View>
           ) : null}
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push(user ? '/profile' : '/auth')}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={user ? 'Profile' : 'Sign in'}
-          style={({ pressed }) => [styles.account, pressed && { opacity: 0.6 }]}>
-          <SymbolView
-            name={user ? 'person.crop.circle.fill' : 'person.crop.circle'}
-            size={30}
-            tintColor={user ? c.brandStrong : c.foreground}
-          />
         </Pressable>
       </View>
       {total > 0 ? (
@@ -206,6 +163,8 @@ export default function FeedScreen() {
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={{ height: Space.md }} />}
         keyboardDismissMode="on-drag"
+        onScroll={(e) => reportScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
         onEndReachedThreshold={0.6}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -246,22 +205,7 @@ const styles = StyleSheet.create({
     paddingBottom: Space.sm,
     gap: Space.sm,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Space.sm,
-  },
-  account: {
-    padding: 2,
-  },
-  notifications: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    padding: 2,
-  },
   search: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Space.sm,
@@ -288,17 +232,10 @@ const styles = StyleSheet.create({
   regionInInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     alignSelf: 'stretch',
-    maxWidth: 76,
     paddingRight: Space.sm,
     marginRight: Space.xs,
     borderRightWidth: 1,
-  },
-  regionLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    flexShrink: 1,
   },
   count: {
     fontSize: 13,
@@ -319,7 +256,8 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Space.lg,
     paddingTop: Space.sm,
-    paddingBottom: Space.xl,
+    // Clears the custom bottom tab bar so the last card isn't hidden behind it.
+    paddingBottom: Space.xl + TAB_BAR_HEIGHT,
   },
   footer: {
     paddingVertical: Space.lg,
