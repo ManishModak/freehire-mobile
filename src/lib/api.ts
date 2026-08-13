@@ -8,6 +8,7 @@
 import type {
   FacetCounts,
   Job,
+  NotificationItem,
   NotificationsPage,
   Page,
   PushDevice,
@@ -228,6 +229,17 @@ export async function getNotifications(limit?: number, offset?: number): Promise
   if (offset != null) params.set('offset', String(offset));
   const qs = params.toString();
   return send<NotificationsPage>(`/api/v1/me/notifications${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+/** One notification, including its `jobs` snapshot when it has one — the read
+ *  a direct visit/deep-link to the digest jobs-list screen needs, since
+ *  getNotifications alone only ever serves the caller's current page. Owner-
+ *  scoped: another user's id 404s. */
+export async function getNotification(id: number): Promise<NotificationItem> {
+  const { data } = await send<{ data: NotificationItem }>(`/api/v1/me/notifications/${id}`, {
+    method: 'GET',
+  });
+  return data;
 }
 
 /** Mark one notification read. Idempotent — repeating it on an already-read

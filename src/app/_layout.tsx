@@ -92,6 +92,9 @@ export default function RootLayout() {
               <Stack.Screen name="auth" options={{ headerShown: false, presentation: 'modal' }} />
               <Stack.Screen name="profile" options={{ headerShown: false, presentation: 'modal' }} />
               <Stack.Screen name="notifications" options={{ headerShown: false, presentation: 'modal' }} />
+              {/* A multi-job digest's own matched-jobs list, pushed within that
+                  modal — no native header, same reasoning as jobs/[slug]. */}
+              <Stack.Screen name="notifications/[id]" options={{ headerShown: false }} />
             </Stack>
           </FilterProvider>
         </AuthProvider>

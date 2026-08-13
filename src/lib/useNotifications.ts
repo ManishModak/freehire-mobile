@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { getNotifications } from './api';
+import { getNotification, getNotifications } from './api';
 import { useAuth } from './authStore';
 
 const PAGE_SIZE = 20;
@@ -35,5 +35,19 @@ export function useNotifications() {
       return loaded < lastPage.meta.total ? loaded : undefined;
     },
     enabled: !!user,
+  });
+}
+
+/**
+ * A single notification by id — the digest jobs-list screen's own read,
+ * needed because getNotifications alone only ever serves whichever page the
+ * list screen last loaded. Keyed on id so navigating between notifications
+ * (or back to one) caches each independently, mirroring `useJob`.
+ */
+export function useNotification(id: number | undefined) {
+  return useQuery({
+    queryKey: ['notifications', 'detail', id],
+    queryFn: () => getNotification(id as number),
+    enabled: id != null,
   });
 }

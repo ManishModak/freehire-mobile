@@ -93,8 +93,9 @@ function NotificationCard({
  * per the backend's idempotent `POST .../read`) and, when it carries a job's
  * `public_slug`, navigates there. `nudge_follow_up`/`nudge_interview_prep`
  * navigate to the job here too — unlike the web app, this one has no
- * tracking-board screen to send them to instead. A slug-less card (a
- * multi-job digest) only marks read; nothing navigates.
+ * tracking-board screen to send them to instead. A slug-less card carrying a
+ * `jobs` snapshot (a multi-job digest) opens its own matched-jobs screen
+ * instead of a single job; one with neither only marks read.
  */
 export default function NotificationsScreen() {
   const c = getColors(useColorScheme());
@@ -141,7 +142,13 @@ export default function NotificationsScreen() {
     markNotificationRead(item.id).catch(() => {
       // Best-effort: see markReadLocally's note above.
     });
-    if (item.public_slug) router.push(`/jobs/${item.public_slug}`);
+    if (item.public_slug) {
+      router.push(`/jobs/${item.public_slug}`);
+    } else if (item.jobs && item.jobs.length > 0) {
+      // A multi-job digest carries no single slug — its own jobs-list screen
+      // shows the snapshot recorded at delivery instead.
+      router.push(`/notifications/${item.id}`);
+    }
   }
 
   let body: React.ReactNode;

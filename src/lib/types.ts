@@ -153,8 +153,20 @@ export type NotificationItem = {
   title: string;
   body: string;
   public_slug: string | null;
+  /** A multi-job subscription digest's matched-jobs snapshot as of delivery
+   *  (not a live re-run of the saved search) — present only for that one case;
+   *  absent/null for every other kind and for a single-job digest, which uses
+   *  `public_slug` instead. */
+  jobs?: NotificationDigestJob[] | null;
   created_at: string;
   read_at: string | null;
+};
+
+/** One matched job as recorded into a multi-job digest's `jobs` snapshot. */
+export type NotificationDigestJob = {
+  title: string;
+  company: string;
+  slug: string;
 };
 
 /** The notification list envelope: `Page<NotificationItem>` plus the caller's
