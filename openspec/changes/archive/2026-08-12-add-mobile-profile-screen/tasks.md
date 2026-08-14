@@ -13,7 +13,7 @@
 
 - [x] 3.1 In `profile.tsx`, remove the push `Switch`, the "Send test notification" `Pressable`, the `onTogglePush`/`onTestPush` handlers, the `testResult` state, the `usePushNotifications` import/call, and the now-unused `ActivityIndicator`/`Switch` imports if nothing else in the file uses them.
 - [x] 3.2 Add `useProfile()` (from `@/lib/useProfile`) to `profile.tsx` and render a new "Profile" section between Identity and Sign out: specialization chips (`facetValueLabel('category', v)`), skill chips (raw token), and the `profileLocationSummary(profile.location_preferences)` lines — each only rendered when its source array/value is non-empty.
-- [x] 3.3 Render the loading state (spinner) while `useProfile()` is pending, and the empty-state message ("No profile saved yet" + a pointer to freehire.dev/my/profile) when the query has resolved to `null`, per `specs/mobile-profile-view/spec.md`.
+- [x] 3.3 Render the loading state (spinner) while `useProfile()` is pending, and the empty-state message ("No profile saved yet" + a pointer to freehire.me/my/profile) when the query has resolved to `null`, per `specs/mobile-profile-view/spec.md`.
 - [x] 3.4 Add styles for the chips/location lines, following the existing badge/chip visual pattern already in `profile.tsx` (`styles.badge`/`styles.badgeText`) rather than inventing a new one.
 
 ## 4. Verify, simplify, review

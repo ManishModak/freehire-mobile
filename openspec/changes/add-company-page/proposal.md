@@ -30,4 +30,4 @@ The mobile app has no company page: `Job.company_slug` is fetched from the API b
 - `src/lib/api.ts` — new `getCompany(slug)` function.
 - `src/app/companies/[slug].tsx` — new screen (new file).
 - `src/app/_layout.tsx` — new `Stack.Screen` registration.
-- No backend changes; consumes existing `https://freehire.dev` API (`GET /api/v1/companies/{slug}`) already used by `hire/web`.
+- No backend changes; consumes existing `https://freehire.me` API (`GET /api/v1/companies/{slug}`) already used by `hire/web`.

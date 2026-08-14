@@ -59,7 +59,7 @@ Android release signing remains owner-controlled. `credentials.json`, JKS files,
 
 - The session rides the backend's v1 cookie endpoints; sign-in itself uses the v2 PKCE OAuth handshake and native Sign in with Apple.
 - Browser OAuth starts at `/api/v2/auth/oauth/<provider>/start` with an S256 challenge and returns through `freehiremobile://auth-callback`. The verifier never leaves the device, which is what protects that custom scheme.
-- Universal links are deliberately not configured yet: they need an `apple-app-site-association` file on `freehire.dev`/`freehire.me` plus an in-app route that completes the exchange. Turning on a verified App Link before that would strand the handshake.
+- Universal links are deliberately not configured yet: they need an `apple-app-site-association` file on `freehire.me` plus an in-app route that completes the exchange. Turning on a verified App Link before that would strand the handshake.
 - Apple sign-in binds `sha256(raw_nonce)` into the credential and sends the raw nonce to the backend for verification. Do not add Apple private keys to this repository.
 - Password change, identity unlinking, and account deletion sit behind a five-minute recent-auth window; the server is the authority and answers `428` when it has lapsed.
 - RevenueCat and push registration remain separate changes.

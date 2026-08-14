@@ -1,6 +1,6 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-import { DEFAULT_DEVELOPMENT_API_BASE, normalizeApiBase } from './src/lib/apiBase';
+import { DEFAULT_DEVELOPMENT_API_BASE, normalizeApiBase } from './apiBase';
 
 export { DEFAULT_DEVELOPMENT_API_BASE, normalizeApiBase };
 
@@ -25,8 +25,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       buildNumber: '1',
       usesAppleSignIn: true,
       // No `associatedDomains` yet: universal links need an
-      // apple-app-site-association file served from freehire.dev/freehire.me and
-      // an in-app route to receive them. The OAuth handshake returns through the
+      // apple-app-site-association file served from freehire.me and an in-app
+      // route to receive them. The OAuth handshake returns through the
       // `freehiremobile://auth-callback` scheme, which PKCE already protects.
       icon: {
         light: './assets/images/freehire-icon-light.png',

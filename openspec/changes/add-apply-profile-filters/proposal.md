@@ -1,6 +1,6 @@
 ## Why
 
-The web app (freehire.dev) lets a signed-in user with a saved profile seed the job filters from that profile in one tap ("Apply my profile"): their specializations, skills, and location preferences become filter selections instead of being picked by hand. The mobile Filters screen (`src/app/filters.tsx`, from `add-feed-search-filters`) has no equivalent — every filter must be set manually, even for a user who already told the app what they're looking for on the web.
+The web app (freehire.me) lets a signed-in user with a saved profile seed the job filters from that profile in one tap ("Apply my profile"): their specializations, skills, and location preferences become filter selections instead of being picked by hand. The mobile Filters screen (`src/app/filters.tsx`, from `add-feed-search-filters`) has no equivalent — every filter must be set manually, even for a user who already told the app what they're looking for on the web.
 
 ## What Changes
 

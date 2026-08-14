@@ -45,7 +45,7 @@ accordingly. Stays a modal.
      - relocation: "Open to relocation: <regions/countries>" only when
        `relocation.open` is true
    - **Empty state** (`profile === null`, load succeeded): "No profile saved
-     yet" plus a note that it can be set up on freehire.dev/my/profile —
+     yet" plus a note that it can be set up on freehire.me/my/profile —
      mobile stays read-only for now.
    - **Error state** (`useProfile()` fails): a distinct "Couldn't load your
      profile" message, so a failed fetch is never shown as the empty state.

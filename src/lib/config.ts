@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-import { DEFAULT_DEVELOPMENT_API_BASE, DEFAULT_PRODUCTION_API_BASE, normalizeApiBase } from './apiBase';
+import { DEFAULT_DEVELOPMENT_API_BASE, DEFAULT_PRODUCTION_API_BASE, normalizeApiBase } from '../../apiBase';
 
 /**
  * Resolves the origin that `app.config.ts` already validated at build time, so
