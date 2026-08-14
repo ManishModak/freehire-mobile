@@ -1,6 +1,6 @@
 ## Why
 
-The mobile app has email/password sign-in, but freehire.dev also offers GitHub / Google / LinkedIn. The web OAuth flow can't be reused as-is on mobile: it ends by setting an httpOnly cookie after an https redirect, which a native in-app browser can neither complete (it needs a custom-scheme redirect to finish) nor share cookies with the app. Social sign-in on mobile needs a mobile-aware handshake.
+The mobile app has email/password sign-in, but freehire.me also offers GitHub / Google / LinkedIn. The web OAuth flow can't be reused as-is on mobile: it ends by setting an httpOnly cookie after an https redirect, which a native in-app browser can neither complete (it needs a custom-scheme redirect to finish) nor share cookies with the app. Social sign-in on mobile needs a mobile-aware handshake.
 
 ## What Changes
 

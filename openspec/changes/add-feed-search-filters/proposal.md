@@ -1,6 +1,6 @@
 ## Why
 
-The mobile feed is a flat, unfiltered stream of every job, newest-first — there is no way to search by keyword or narrow by work mode, seniority, region, etc. The web app (freehire.dev) turns the same feed into a searchable, faceted experience; the mobile app should reach parity for the highest-value filters, in a mobile-native form.
+The mobile feed is a flat, unfiltered stream of every job, newest-first — there is no way to search by keyword or narrow by work mode, seniority, region, etc. The web app (freehire.me) turns the same feed into a searchable, faceted experience; the mobile app should reach parity for the highest-value filters, in a mobile-native form.
 
 ## What Changes
 
