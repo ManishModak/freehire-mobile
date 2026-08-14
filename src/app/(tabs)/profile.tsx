@@ -1,14 +1,26 @@
+import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppSymbol } from '@/components/AppSymbol';
 import { useAuth } from '@/lib/authStore';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { facetValueLabel, formatDate, profileLocationSummary } from '@/lib/format';
 import { TAB_BAR_HEIGHT } from '@/lib/tabBarVisibility';
 import { useProfile } from '@/lib/useProfile';
+
+const PRIVACY_POLICY_URL = 'https://freehire.me/privacy';
+const TERMS_OF_SERVICE_URL = 'https://freehire.me/terms';
 
 /** One row of chips (specializations or skills), reusing the identity
  *  section's badge shape but without its `capitalize` transform: unlike the
@@ -31,30 +43,85 @@ function ChipRow({ c, values }: { c: ReturnType<typeof getColors>; values: strin
 
 /**
  * The Profile tab: a signed-in user's identity, a read-only view of their
- * saved profile (specializations, skills, location), and a sign-out button.
- * Signed out, it shows an inline "Sign in" prompt instead of redirecting —
- * the tab itself is always a valid destination.
+ * saved profile (specializations, skills, location), account deletion, and sign-out buttons.
+ * Signed out, it shows an inline "Sign in" prompt instead of redirecting.
  */
 export default function ProfileScreen() {
   const c = getColors(useColorScheme());
-  const { user, signOut } = useAuth();
+  const { user, state, signOut, logoutAll, recordReturnIntent, retryBootstrap } = useAuth();
   const { data: profile, isLoading: profileLoading, isError: profileError } = useProfile();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'signOut' | 'logoutAll' | null>(null);
 
   async function onSignOut() {
-    setBusy(true);
-    await signOut();
+    setBusy('signOut');
+    try {
+      await signOut();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onLogoutAll() {
+    setBusy('logoutAll');
+    try {
+      await logoutAll();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const handleOpenPrivacy = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+      });
+    } catch {
+      // quiet fallback
+    }
+  };
+
+  const handleOpenTerms = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(TERMS_OF_SERVICE_URL, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+      });
+    } catch {
+      // quiet fallback
+    }
+  };
+
+  if (state.status === 'unavailable') {
+    return (
+      <SafeAreaView edges={['top']} style={[styles.fill, styles.center, { backgroundColor: c.background }]}>
+        <AppSymbol name="wifi.slash" size={48} tintColor={c.mutedForeground} />
+        <Text style={[styles.stateText, { color: c.mutedForeground }]}>
+          Authentication service temporarily unavailable.
+        </Text>
+        <Pressable
+          onPress={() => void retryBootstrap()}
+          style={({ pressed }) => [
+            styles.signIn,
+            { backgroundColor: c.brand },
+            pressed && { opacity: 0.85 },
+          ]}>
+          <Text style={[styles.signInText, { color: c.brandForeground }]}>Retry</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
   }
 
   if (!user) {
     return (
       <SafeAreaView edges={['top']} style={[styles.fill, styles.center, { backgroundColor: c.background }]}>
-        <SymbolView name="person.crop.circle" size={56} tintColor={c.mutedForeground} />
+        <AppSymbol name="person.crop.circle" size={56} tintColor={c.mutedForeground} />
         <Text style={[styles.stateText, { color: c.mutedForeground }]}>
           Sign in to see your profile.
         </Text>
         <Pressable
-          onPress={() => router.push('/auth')}
+          onPress={() => {
+            recordReturnIntent({ kind: 'navigate', destination: 'account' });
+            router.push('/auth');
+          }}
           style={({ pressed }) => [
             styles.signIn,
             { backgroundColor: c.brand },
@@ -77,7 +144,7 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.identity}>
-          <SymbolView name="person.crop.circle.fill" size={56} tintColor={c.brandStrong} />
+          <AppSymbol name="person.crop.circle.fill" size={56} tintColor={c.brandStrong} />
           <Text style={[styles.email, { color: c.foreground }]} numberOfLines={1}>
             {user.email}
           </Text>
@@ -120,22 +187,97 @@ export default function ProfileScreen() {
             </Text>
           )}
         </View>
+
+        {/* Legal & Policies Section */}
+        <View style={styles.profileSection}>
+          <Text style={[styles.sectionTitle, { color: c.foreground }]}>Legal & Policies</Text>
+          <View style={[styles.cardList, { borderColor: c.border, backgroundColor: c.card }]}>
+            <Pressable
+              onPress={handleOpenPrivacy}
+              style={({ pressed }) => [
+                styles.legalRow,
+                { borderBottomWidth: 1, borderBottomColor: c.border },
+                pressed && { backgroundColor: c.accent },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Privacy Policy">
+              <View style={styles.legalInfo}>
+                <Text style={[styles.legalTitle, { color: c.foreground }]}>Privacy Policy</Text>
+                <Text style={[styles.legalUrl, { color: c.mutedForeground }]}>freehire.me/privacy</Text>
+              </View>
+              <AppSymbol name="arrow.up.right" size={16} tintColor={c.brandStrong} />
+            </Pressable>
+
+            <Pressable
+              onPress={handleOpenTerms}
+              style={({ pressed }) => [
+                styles.legalRow,
+                pressed && { backgroundColor: c.accent },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Terms of Service">
+              <View style={styles.legalInfo}>
+                <Text style={[styles.legalTitle, { color: c.foreground }]}>Terms of Service</Text>
+                <Text style={[styles.legalUrl, { color: c.mutedForeground }]}>freehire.me/terms</Text>
+              </View>
+              <AppSymbol name="arrow.up.right" size={16} tintColor={c.brandStrong} />
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <Pressable
-          onPress={onSignOut}
-          disabled={busy}
+          onPress={() => router.push('/account/security')}
           style={({ pressed }) => [
-            styles.signOut,
+            styles.actionButton,
+            { borderColor: c.border, backgroundColor: c.card },
+            pressed && { backgroundColor: c.accent },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Security Settings">
+          <Text style={[styles.actionButtonText, { color: c.foreground }]}>Security Settings</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={onSignOut}
+          disabled={busy !== null}
+          style={({ pressed }) => [
+            styles.actionButton,
             { borderColor: c.border, backgroundColor: c.card },
             pressed && { backgroundColor: c.accent },
           ]}>
-          {busy ? (
+          {busy === 'signOut' ? (
             <ActivityIndicator color={c.mutedForeground} />
           ) : (
-            <Text style={[styles.signOutText, { color: c.foreground }]}>Sign out</Text>
+            <Text style={[styles.actionButtonText, { color: c.foreground }]}>Sign out</Text>
           )}
+        </Pressable>
+
+        <Pressable
+          onPress={onLogoutAll}
+          disabled={busy !== null}
+          style={({ pressed }) => [
+            styles.actionButton,
+            { borderColor: c.border, backgroundColor: c.card },
+            pressed && { backgroundColor: c.accent },
+          ]}>
+          {busy === 'logoutAll' ? (
+            <ActivityIndicator color={c.mutedForeground} />
+          ) : (
+            <Text style={[styles.actionButtonText, { color: c.foreground }]}>Sign out of all devices</Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={() => (router.push as (path: string) => void)('/account/delete')}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Delete Account">
+          <Text style={[styles.deleteButtonText, { color: c.destructive }]}>Delete Account</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -227,18 +369,50 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: Space.lg,
-    // Clears the custom bottom tab bar so the sign-out button isn't hidden behind it.
     paddingBottom: Space.lg + TAB_BAR_HEIGHT,
+    gap: Space.sm,
   },
-  signOut: {
+  actionButton: {
     borderWidth: 1,
     borderRadius: Radius.lg,
-    height: 50,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signOutText: {
-    fontSize: 16,
+  actionButtonText: {
+    fontSize: 15,
     fontWeight: '600',
+  },
+  deleteButton: {
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Space.xs,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cardList: {
+    borderWidth: 1,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Space.lg,
+    paddingVertical: Space.md,
+  },
+  legalInfo: {
+    gap: 2,
+  },
+  legalTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  legalUrl: {
+    fontSize: 12,
   },
 });
