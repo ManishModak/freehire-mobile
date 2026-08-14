@@ -2,7 +2,14 @@ import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 import type * as NotificationsType from 'expo-notifications';
 
-export const isPushSupported = !(isRunningInExpoGo() && Platform.OS === 'android');
+/**
+ * Push exists on the two native platforms only. On web the module imports fine
+ * but every call into it throws ("not available on web"), which took down the
+ * root layout's notification effect; Expo Go on Android dropped remote push in
+ * SDK 53.
+ */
+export const isPushSupported =
+  (Platform.OS === 'ios' || Platform.OS === 'android') && !(isRunningInExpoGo() && Platform.OS === 'android');
 
 let cachedModule: typeof NotificationsType | null = null;
 
