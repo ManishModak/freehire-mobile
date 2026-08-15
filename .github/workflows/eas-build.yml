@@ -44,10 +44,48 @@ on:
         type: string
         default: ""
 
+  # The same build, callable from another workflow — `release.yml` invokes it
+  # once per platform, because a release needs two different profiles at once
+  # (production for the App Store, preview for Firebase, which only takes an
+  # APK). The inputs have to be declared again rather than shared: GitHub keeps
+  # `workflow_dispatch` and `workflow_call` input lists separate. `choice` has
+  # no `workflow_call` equivalent, hence `string` for the two enums.
+  workflow_call:
+    inputs:
+      platform:
+        type: string
+        required: true
+      profile:
+        type: string
+        required: true
+      distribute-android:
+        type: boolean
+        default: false
+      testers-group:
+        type: string
+        default: testers
+      submit-ios:
+        type: boolean
+        default: false
+      testflight-group:
+        type: string
+        default: ""
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Fail in seconds on a combination that cannot work, rather than after a
+      # ~20 minute build: the production profile emits an .aab for Google Play,
+      # and Firebase App Distribution rejects it ("APK cannot be analyzed using
+      # aapt dump badging") unless the app is linked to a Play account. The APK
+      # comes from the internal-distribution profiles.
+      - name: Reject a Firebase distribution of a Play bundle
+        if: ${{ inputs.distribute-android && inputs.profile == 'production' && inputs.platform != 'ios' }}
+        run: |
+          echo "::error::Firebase App Distribution needs an APK; the 'production' profile builds an .aab. Use the 'preview' profile for Android distribution." >&2
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
 
