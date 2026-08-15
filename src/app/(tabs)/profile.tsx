@@ -1,6 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -51,6 +51,23 @@ export default function ProfileScreen() {
   const { user, state, signOut, logoutAll, recordReturnIntent, retryBootstrap } = useAuth();
   const { data: profile, isLoading: profileLoading, isError: profileError } = useProfile();
   const [busy, setBusy] = useState<'signOut' | 'logoutAll' | null>(null);
+
+  // A guest opening this tab wants to sign in, so hand them the sheet rather
+  // than a screen whose only content is a button that opens it. Once per
+  // signed-out spell, not once per focus: the sheet closing returns focus here,
+  // and reopening on that would trap them behind a sheet they just dismissed.
+  // The inline prompt below stays as the way back in.
+  const promptedRef = useRef(false);
+  useEffect(() => {
+    if (user || state.status === 'bootstrapping' || state.status === 'unavailable') {
+      promptedRef.current = false;
+      return;
+    }
+    if (promptedRef.current) return;
+    promptedRef.current = true;
+    recordReturnIntent({ kind: 'navigate', destination: 'account' });
+    router.push('/auth');
+  }, [user, state.status, recordReturnIntent]);
 
   async function onSignOut() {
     setBusy('signOut');
