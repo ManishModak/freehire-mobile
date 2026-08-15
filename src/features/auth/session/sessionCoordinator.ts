@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { generateVerifier, computeChallenge } from '@/lib/pkce';
 import { generateNonce, sha256Hex } from '@/lib/nonce';
+import { mobileOAuthReturnUrl } from '@/lib/oauthReturn';
 import type { User } from '@/lib/types';
 import { ApiError } from '@/lib/transport';
 
@@ -27,7 +28,7 @@ type CoordinatorDependencies = {
   transitionIdentity: (previousUserId: number | undefined, nextUserId: number | undefined, nextEpoch: number) => Promise<void>;
   executeReturnIntent: (intent: ReturnIntent, user: User, sessionEpoch: number) => Promise<void>;
   openOAuth: (provider: string) => Promise<{ code?: string; cancelled: boolean }>;
-  openOAuthV2?: (url: string) => Promise<{ code?: string; cancelled: boolean }>;
+  openOAuthV2?: (url: string, returnUrl: string) => Promise<{ code?: string; cancelled: boolean }>;
 };
 
 type Operation = { generation: number; epoch: number; controller: AbortController };
@@ -167,12 +168,14 @@ export class SessionCoordinator {
     try {
       const verifier = generateVerifier();
       const codeChallenge = await computeChallenge(verifier);
-      const callbackTarget = 'freehiremobile://auth-callback';
       const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+      // The backend keys its allowlist by platform name and appends `?code=` to
+      // the verified HTTPS URL it holds for that key — it never accepts a URL
+      // from the client, which is what makes the return leg unspoofable.
       const url = authV2Api.oauthStartUrl(provider, {
         provider,
         platform,
-        callbackTarget,
+        callbackTarget: platform,
         purpose,
         codeChallenge,
       });
@@ -184,7 +187,7 @@ export class SessionCoordinator {
       if (!opener) {
         throw new Error('PKCE OAuth requires an openOAuthV2 opener');
       }
-      const browser = await opener(url);
+      const browser = await opener(url, mobileOAuthReturnUrl());
       if (!this.isCurrent(operation)) return { status: 'cancelled', intent: 'none' };
       if (browser.cancelled || !browser.code) {
         this.restoreAfterAuthFailure(previousState);

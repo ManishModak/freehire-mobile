@@ -24,10 +24,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier: 'me.freehire.mobile',
       buildNumber: '1',
       usesAppleSignIn: true,
-      // No `associatedDomains` yet: universal links need an
-      // apple-app-site-association file served from freehire.me and an in-app
-      // route to receive them. The OAuth handshake returns through the
-      // `freehiremobile://auth-callback` scheme, which PKCE already protects.
+      // The v2 OAuth handshake returns on a verified HTTPS link, never on a
+      // custom scheme — freehire.me vouches for this app in its
+      // /.well-known/apple-app-site-association, so no other app can claim the
+      // return leg. Required for `preferUniversalLinks` in authStore.
+      associatedDomains: ['applinks:freehire.me'],
       icon: {
         light: './assets/images/freehire-icon-light.png',
         dark: './assets/images/freehire-icon-dark.png',
@@ -47,10 +48,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         monochromeImage: './assets/images/android-icon-monochrome.png',
       },
       predictiveBackGestureEnabled: false,
-      // No verified App Link filter for /api/v2/auth/oauth yet: with `autoVerify`
-      // on, Android would hand that redirect to the app mid-handshake, leaving
-      // `openAuthSessionAsync` waiting forever and the user on a route that does
-      // not exist. Reinstate it together with a route that completes the exchange.
+      // The App Link counterpart of the iOS associated domain: the OAuth return
+      // path only, so ordinary freehire.me links keep opening in the browser.
+      // Verified through /.well-known/assetlinks.json.
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [{ scheme: 'https', host: 'freehire.me', pathPrefix: '/auth/mobile-callback' }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     web: {
       output: 'static',

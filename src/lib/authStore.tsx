@@ -67,8 +67,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [returnIntents] = useState(() => new ReturnIntentManager());
   const [mutationRegistry] = useState(() => new PrivateMutationRegistry());
 
-  const openOAuthV2 = useCallback(async (url: string) => {
-    const result = await WebBrowser.openAuthSessionAsync(url, OAUTH_CALLBACK);
+  const openOAuthV2 = useCallback(async (url: string, returnUrl: string) => {
+    // `preferUniversalLinks` makes ASWebAuthenticationSession close on the
+    // verified HTTPS return instead of waiting for a custom scheme it will
+    // never see (iOS 17.4+, and only with the Associated Domains entitlement
+    // that app.config.ts declares). Android matches it through the App Link
+    // intent filter on the same path.
+    const result = await WebBrowser.openAuthSessionAsync(url, returnUrl, { preferUniversalLinks: true });
     if (result.type !== 'success') return { cancelled: true };
     const callback = codeFromCallbackUrl(result.url);
     if (callback.error) throw new Error('oauth');
@@ -131,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (callback.error) throw new Error('oauth');
         return { code: callback.code, cancelled: !callback.code };
       },
-      openOAuthV2: (url) => openOAuthV2(url),
+      openOAuthV2: (url, returnUrl) => openOAuthV2(url, returnUrl),
     });
     return instance;
   });

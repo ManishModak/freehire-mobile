@@ -58,7 +58,7 @@ function createHarness(overrides: {
   logout?: (signal?: AbortSignal) => Promise<void>;
   logoutAll?: (epoch: number, signal?: AbortSignal) => Promise<void>;
   openOAuth?: (provider: string) => Promise<{ code?: string; cancelled: boolean }>;
-  openOAuthV2?: (url: string) => Promise<{ code?: string; cancelled: boolean }>;
+  openOAuthV2?: (url: string, returnUrl: string) => Promise<{ code?: string; cancelled: boolean }>;
 } = {}) {
   const states: unknown[] = [];
   const transitions: [number | undefined, number | undefined, number][] = [];
@@ -197,6 +197,43 @@ describe('SessionCoordinator fencing & V2 flows', () => {
       expect(res).toEqual({ status: 'success', intent: 'none' });
       expect(coordinator.getState()).toEqual({ status: 'authenticated', user: userA });
       expect(mockAuthV2Api.oauthExchange).toHaveBeenCalledWith('otc_123', expect.any(String), expect.any(Object));
+    });
+
+    // The backend keys MOBILE_AUTH_CALLBACKS by platform name and rejects
+    // anything else with 400 invalid_callback_target. Sending a URL here (a
+    // custom scheme, say) breaks browser sign-in against a real deployment
+    // while every mock still passes, so pin the contract.
+    it('names the platform as the callback target, never a URL', async () => {
+      mockAuthV2Api.oauthExchange.mockResolvedValueOnce(userA);
+      const { coordinator } = createHarness({
+        openOAuthV2: async () => ({ code: 'otc_123', cancelled: false }),
+      });
+
+      await coordinator.oauthV2('github', 'sign_in');
+
+      const params = mockAuthV2Api.oauthStartUrl.mock.calls[0]?.[1];
+      expect(params?.callbackTarget).toBe(params?.platform);
+      expect(['ios', 'android']).toContain(params?.callbackTarget);
+    });
+
+    // Production resolves this to https://freehire.me/…; a dev build points at
+    // the local http origin, so the assertion is on the shape that matters:
+    // a web origin the domain can vouch for, never a hijackable app scheme.
+    it('returns on a web link rather than a custom scheme', async () => {
+      mockAuthV2Api.oauthExchange.mockResolvedValueOnce(userA);
+      const returns: string[] = [];
+      const { coordinator } = createHarness({
+        openOAuthV2: async (_url: string, returnUrl: string) => {
+          returns.push(returnUrl);
+          return { code: 'otc_123', cancelled: false };
+        },
+      });
+
+      await coordinator.oauthV2('github', 'sign_in');
+
+      expect(returns[0]).toMatch(/^https?:\/\//);
+      expect(returns[0]).not.toContain('freehiremobile://');
+      expect(returns[0]).toContain('/auth/mobile-callback');
     });
 
     it('handles oauthV2 cancellation cleanly', async () => {
