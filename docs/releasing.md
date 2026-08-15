@@ -1,0 +1,143 @@
+# Releasing
+
+There are two different things people call "a release", and they are not the
+same button:
+
+| | Who gets it | Wired up? |
+|---|---|---|
+| **Testers** — TestFlight + Firebase App Distribution | People you invited | **Yes**, tag and go |
+| **The public** — App Store + Google Play | Anyone | **No**, see [Shipping to the stores](#shipping-to-the-stores) |
+
+Tagging ships to testers. It does **not** put the app in front of the public.
+
+## Releasing to testers
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+That is the whole procedure. `.github/workflows/release.yml` fires on any `v*`
+tag and runs two builds in parallel:
+
+- **iOS** on the `production` profile, then `eas submit` to App Store Connect,
+  where it appears under TestFlight.
+- **Android** on the `preview` profile, then upload to Firebase App
+  Distribution for the `testers` group.
+
+Builds run on EAS, not on the GitHub runner — the workflow only invokes
+`eas build` and waits. Expect ~15–25 minutes.
+
+### Why the two platforms use different profiles
+
+Not an oversight, and don't "fix" it:
+
+- **iOS must be `production`.** TestFlight *is* App Store Connect, so the
+  binary has to be an App Store build.
+- **Android must be `preview`.** `production` emits an `.aab` for Google Play,
+  and Firebase App Distribution rejects it (`APK cannot be analyzed using aapt
+  dump badging`) unless the app is linked to a Play account. The APK comes from
+  the internal-distribution profiles.
+
+Picking `production` + Firebase by hand now fails in the first seconds with a
+message naming the profile, rather than after a full build with a message about
+`aapt`.
+
+### Before the first tag lands anywhere useful
+
+**iOS: create a TestFlight group.** In [App Store
+Connect](https://appstoreconnect.apple.com/apps/6801885119/testflight/ios) →
+TestFlight. There are no groups yet, so submitted builds sit there unseen.
+`release.yml` passes an empty `testflight-group` for exactly that reason — put
+the group's name in once it exists.
+
+- *Internal* testers: up to 100, each needs a seat in your App Store Connect.
+  They get the build as soon as Apple finishes processing (5–10 min).
+- *External* testers: any email, but the first build of each version needs Beta
+  App Review — usually about a day — plus "What to Test" notes.
+
+**Android: nothing.** The `testers` group already exists in Firebase with its
+members.
+
+## Shipping to the stores
+
+Neither store is wired up. This is what each one still needs.
+
+### App Store
+
+The pieces that exist: the app record (ASC App ID `6801885119`), the signing
+credentials, and an App Store Connect API key on EAS (`6GKQH54MG5`, role Admin),
+so uploads already work — that is what TestFlight uses.
+
+What is missing is everything Apple asks for before a build can go public:
+listing metadata, screenshots for every required device size, the privacy
+questionnaire ("App Privacy"), age rating, support and marketing URLs, and a
+demo account if any part of the app is behind sign-in.
+
+Then, in App Store Connect, you attach a processed build to a version and submit
+it for App Review. `eas submit` uploads binaries; it does not submit for review.
+Review takes anywhere from a day to a week on a first submission.
+
+### Google Play
+
+Nothing is connected: EAS holds **no** Google Play service account, and
+`eas.json` has no `submit.android` block.
+
+To wire it:
+
+1. Create the app in the Play Console and upload one `.aab` **by hand** — Google
+   requires the first upload of a package name to be manual.
+2. Create a Google Cloud service account, grant it release permissions in the
+   Play Console, and give the JSON to EAS
+   (`eas credentials -p android`, or `submit.production.android.serviceAccountKeyPath`).
+3. Fill in the store listing, content rating, data safety form and target
+   audience declarations.
+
+After that, `eas submit -p android --profile production` can push to a track.
+Build the `.aab` with the `production` profile, not `preview`.
+
+## Version numbers
+
+`version` in `app.config.ts` is the user-visible one (`1.0.0`) — bump it by hand
+when you want the number to change, and tag to match.
+
+Build numbers are not yours to manage: `eas.json` sets `appVersionSource:
+"remote"`, so EAS tracks them, and the `production` profile carries
+`autoIncrement`. Two builds of the same `version` differ by build number, which
+is what App Store Connect and Firebase key on.
+
+## Building without releasing
+
+`.github/workflows/eas-build.yml` still runs manually — Actions → EAS Build →
+Run workflow, or:
+
+```bash
+gh workflow run eas-build.yml --ref master -f platform=all -f profile=preview
+```
+
+With both distribution toggles off (the default) it dispatches the build and
+returns immediately; the artifacts wait on EAS. Turn one on and the job blocks
+until the build finishes, because it needs the artifact.
+
+`release.yml` calls this same workflow once per platform, so a change to the
+build or distribution steps only has to be made in one place.
+
+## Traps that have already cost a day
+
+- **A new entitlement or capability in `app.config.ts` invalidates the iOS
+  provisioning profile.** The build fails deep inside fastlane, complaining
+  that the profile lacks the capability. Regenerate it *before* the next build:
+  `eas credentials -p ios` → build profile `production` → delete the
+  provisioning profile → `All: Set up all the required credentials`. It needs an
+  interactive Apple login with 2FA, so CI can never do it for you. Tell the App
+  Store profile from the Ad Hoc one by its lack of a "Provisioned devices" list.
+
+- **Every EAS environment needs `EXPO_PUBLIC_API_BASE`.** `apiBase.js` throws
+  rather than guessing for anything but `development`, so a missing value fails
+  the build in ~25 seconds at "Read app config". `production` and `preview` are
+  set to `https://freehire.me`; a new environment needs its own.
+
+- **Don't rename `slug`, `scheme`, `bundleIdentifier` or `package`.** EAS, the
+  signing profile, the App Store Connect record, Firebase, and freehire.me's
+  `apple-app-site-association` all hold those. Renaming one produces a different
+  app, not a renamed one. The name under the icon is `name`, and only `name`.

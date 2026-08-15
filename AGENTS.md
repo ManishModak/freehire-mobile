@@ -14,3 +14,16 @@ once per clone) runs eslint + tsc on staged files.
 profile inputs). Requires the `EXPO_TOKEN` repo secret; production Android
 additionally requires the release keystore to already be uploaded to EAS via
 `eas credentials` (`eas.json` points production Android at remote credentials).
+
+## Releasing
+
+Read [docs/releasing.md](docs/releasing.md) before touching a workflow, a build
+profile, or anything under `ios`/`android` in `app.config.ts`.
+
+The short version: a `v*` tag ships both platforms **to testers** (TestFlight +
+Firebase) via `release.yml`, which calls `eas-build.yml` once per platform. The
+two use different profiles on purpose — iOS `production`, Android `preview` —
+because Firebase only takes an APK and `production` emits an `.aab`. Neither
+store is wired for public release. Adding an entitlement to `app.config.ts`
+invalidates the iOS provisioning profile and needs an interactive
+`eas credentials -p ios` before the next build; CI cannot do it.

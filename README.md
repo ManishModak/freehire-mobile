@@ -55,6 +55,10 @@ eas build --profile production --platform all
 
 Android release signing remains owner-controlled. `credentials.json`, JKS files, Apple `.p8` keys, and other signing material are ignored and must never be committed.
 
+## Releasing
+
+`git push origin v1.0.1` ships both platforms to testers — TestFlight and Firebase App Distribution. Shipping to the App Store and Google Play is a separate, not-yet-wired process. See [docs/releasing.md](docs/releasing.md).
+
 ## Authentication boundaries
 
 - The session rides the backend's v1 cookie endpoints; sign-in itself uses the v2 PKCE OAuth handshake and native Sign in with Apple.
