@@ -9,6 +9,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const allowLocalHttp = profile === 'development';
   const apiBase = normalizeApiBase(process.env.EXPO_PUBLIC_API_BASE, allowLocalHttp);
 
+  // `?mode=developer` makes the device fetch /.well-known straight from the
+  // domain instead of Apple's CDN, which otherwise caches the association for
+  // hours and never refreshes inside a simulator. Development builds only:
+  // shipping it would skip the CDN in production too.
+  const associationSuffix = profile === 'development' ? '?mode=developer' : '';
+
   return {
     ...config,
     name: 'freehire-mobile',
@@ -23,6 +29,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...config.ios,
       bundleIdentifier: 'me.freehire.mobile',
       buildNumber: '1',
+      // The team that owns this App ID, the Sign in with Apple key, and the EAS
+      // project. Without it prebuild picks whatever team Xcode defaults to, and
+      // the resulting app id fails the association check — freehire.me vouches
+      // for 25U9HN34VM.me.freehire.mobile, nothing else.
+      appleTeamId: '25U9HN34VM',
       usesAppleSignIn: true,
       // The v2 OAuth handshake returns on a verified HTTPS link, never on a
       // custom scheme — freehire.me vouches for this app in its
@@ -33,7 +44,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // ASWebAuthenticationSession demands before it will accept an HTTPS
       // callback at all — without it the session fails outright with
       // "not associated with domain freehire.me".
-      associatedDomains: ['applinks:freehire.me', 'webcredentials:freehire.me'],
+      associatedDomains: [
+        `applinks:freehire.me${associationSuffix}`,
+        `webcredentials:freehire.me${associationSuffix}`,
+      ],
       icon: {
         light: './assets/images/freehire-icon-light.png',
         dark: './assets/images/freehire-icon-dark.png',

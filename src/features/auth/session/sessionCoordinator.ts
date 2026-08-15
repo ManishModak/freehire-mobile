@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { generateVerifier, computeChallenge } from '@/lib/pkce';
-import { generateNonce, sha256Hex } from '@/lib/nonce';
 import { mobileOAuthReturnUrl } from '@/lib/oauthReturn';
 import type { User } from '@/lib/types';
 import { ApiError } from '@/lib/transport';
@@ -222,8 +221,12 @@ export class SessionCoordinator {
         throw new Error('Sign in with Apple is not available on this device');
       }
 
-      const rawNonce = generateNonce();
-      const nonceChallenge = await sha256Hex(rawNonce);
+      // Same shapes as PKCE, because the server applies the same rules: the raw
+      // nonce must match ^[A-Za-z0-9._~-]{43,128}$ and the challenge must be
+      // base64url(sha256(raw)), exactly 43 chars. Hex digests were rejected
+      // outright with 400 invalid_apple_attempt.
+      const rawNonce = generateVerifier();
+      const nonceChallenge = await computeChallenge(rawNonce);
       const attempt = await authV2Api.appleAttempt(purpose, nonceChallenge, operation.controller.signal);
       if (!this.isCurrent(operation)) return { status: 'cancelled', intent: 'none' };
 
