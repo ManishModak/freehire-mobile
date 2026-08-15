@@ -43,21 +43,23 @@ Picking `production` + Firebase by hand now fails in the first seconds with a
 message naming the profile, rather than after a full build with a message about
 `aapt`.
 
-### Before the first tag lands anywhere useful
+### Who actually receives it
 
-**iOS: create a TestFlight group.** In [App Store
+**iOS** goes to the internal group **`Team (Expo)`**, which EAS created on the
+first submission — [App Store
 Connect](https://appstoreconnect.apple.com/apps/6801885119/testflight/ios) →
-TestFlight. There are no groups yet, so submitted builds sit there unseen.
-`release.yml` passes an empty `testflight-group` for exactly that reason — put
-the group's name in once it exists.
+TestFlight. `release.yml` names it, so tagged builds are assigned automatically.
 
-- *Internal* testers: up to 100, each needs a seat in your App Store Connect.
-  They get the build as soon as Apple finishes processing (5–10 min).
-- *External* testers: any email, but the first build of each version needs Beta
-  App Review — usually about a day — plus "What to Test" notes.
+Internal means every member needs a seat in your App Store Connect (Users and
+Access) — up to 100 people, and they get each build as soon as Apple finishes
+processing it, 5–10 minutes. Handing the app to arbitrary addresses, the way
+Firebase does, needs an **External** group instead: same page, but Apple runs
+Beta App Review on the first build of each version — about a day — and asks for
+"What to Test" notes. Point `testflight-group` at whichever you mean.
 
-**Android: nothing.** The `testers` group already exists in Firebase with its
-members.
+**Android** goes to the Firebase group **`testers`**, which already exists and
+has its members. No App Store Connect seat, no review, no ceremony — any email
+works.
 
 ## Shipping to the stores
 

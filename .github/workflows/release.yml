@@ -24,10 +24,12 @@ jobs:
       platform: ios
       profile: production
       submit-ios: true
-      # Left empty deliberately: no TestFlight group exists yet, and naming one
-      # that doesn't fails the submission. The build lands in App Store Connect
-      # and waits there. Once a group exists, put its name here.
-      testflight-group: ""
+      # EAS created this internal group on the first submission and assigns
+      # builds to it. Internal means every member needs a seat in App Store
+      # Connect; handing the app to arbitrary addresses, the way Firebase does,
+      # needs an External group instead — and Apple reviews the first build of
+      # each version before those testers see it.
+      testflight-group: "Team (Expo)"
     secrets: inherit
 
   android:
