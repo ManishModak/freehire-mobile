@@ -28,7 +28,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // custom scheme — freehire.me vouches for this app in its
       // /.well-known/apple-app-site-association, so no other app can claim the
       // return leg. Required for `preferUniversalLinks` in authStore.
-      associatedDomains: ['applinks:freehire.me'],
+      // Both service types, for two different jobs: `applinks` lets the OS hand
+      // the return URL to the app, `webcredentials` is what
+      // ASWebAuthenticationSession demands before it will accept an HTTPS
+      // callback at all — without it the session fails outright with
+      // "not associated with domain freehire.me".
+      associatedDomains: ['applinks:freehire.me', 'webcredentials:freehire.me'],
       icon: {
         light: './assets/images/freehire-icon-light.png',
         dark: './assets/images/freehire-icon-dark.png',
