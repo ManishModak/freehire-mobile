@@ -1,6 +1,15 @@
 import { QueryClient } from '@tanstack/react-query';
 
-import { PrivateMutationRegistry, clearPrivateUserData, privateKeys } from './queryKeys';
+import { PrivateMutationRegistry, clearPrivateUserData, privateKeys, publicKeys } from './queryKeys';
+
+describe('company directory keys', () => {
+  it('separates a cache entry per settled search', () => {
+    const base = publicKeys.companies.search('stripe');
+    expect(base).toEqual(['public', 'companies', 'search', 'stripe']);
+    expect(publicKeys.companies.search('vercel')).not.toEqual(base);
+    expect(publicKeys.companies.search('')).not.toEqual(base);
+  });
+});
 
 describe('private query ownership', () => {
   it('requires a stable user id in every private key', () => {

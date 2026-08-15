@@ -5,6 +5,11 @@ export const publicKeys = {
     search: (query: string) => ['public', 'jobs', 'search', query] as const,
     detail: (slug: string | undefined) => ['public', 'jobs', 'detail', slug] as const,
   },
+  companies: {
+    /** Keyed on the SETTLED search text, so changing it swaps cache entries and
+     *  pagination restarts from the first page. */
+    search: (query: string) => ['public', 'companies', 'search', query] as const,
+  },
   facets: (query: string) => ['public', 'facets', query] as const,
   oauthProviders: ['public', 'auth', 'oauth-providers'] as const,
   v2Providers: ['public', 'auth', 'v2-providers'] as const,
