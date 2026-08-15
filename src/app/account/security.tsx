@@ -268,7 +268,9 @@ export default function SecurityScreen() {
       {/* Header Bar */}
       <View style={[styles.headerBar, { borderBottomColor: c.border }]}>
         <Pressable
-          onPress={() => router.back()}
+          // Arriving from a deep link or a push leaves nothing to go back to,
+          // and a button that silently does nothing strands the user here.
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Back">

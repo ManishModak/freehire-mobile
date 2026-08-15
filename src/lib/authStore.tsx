@@ -104,10 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (router.canGoBack()) {
             router.back();
           } else {
-            // The intent records where the user was headed; every navigate intent
-            // today comes from an account screen, so send them there rather than
-            // to the profile tab they never asked for.
-            router.replace(intent.destination === 'account' ? '/account' : '/profile');
+            // Every navigate intent starts from an account screen, and those all
+            // live under the Profile tab, so that is where a user with nothing
+            // to go back to belongs.
+            router.replace('/profile');
           }
           return;
         }

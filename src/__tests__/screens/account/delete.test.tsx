@@ -17,6 +17,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     push: jest.fn(),
     replace: jest.fn(),
+    canGoBack: jest.fn(() => true),
   },
 }));
 
@@ -158,6 +159,21 @@ describe('DeleteAccountScreen (src/app/account/delete.tsx)', () => {
       cancelBtn.props.onPress();
     });
     expect(router.back).toHaveBeenCalledTimes(2);
+  });
+
+  // Reached by deep link or a push, this screen has nothing behind it, and
+  // router.back() on an empty stack is a no-op — leaving the user stranded on
+  // the account-deletion screen with no way out but killing the app.
+  it('falls back to the profile tab when there is nothing to go back to', () => {
+    (router.canGoBack as jest.Mock).mockReturnValue(false);
+    const renderer = renderScreen();
+
+    act(() => {
+      renderer.root.findByProps({ accessibilityLabel: 'Back' }).props.onPress();
+    });
+
+    expect(router.back).not.toHaveBeenCalled();
+    expect(router.replace).toHaveBeenCalledWith('/profile');
   });
 
   it('opens subscription settings when Manage Subscriptions is pressed', async () => {

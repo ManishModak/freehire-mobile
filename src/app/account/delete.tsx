@@ -199,7 +199,9 @@ export default function DeleteAccountScreen() {
       {/* Header Bar */}
       <View style={[styles.headerBar, { borderBottomColor: c.border }]}>
         <Pressable
-          onPress={() => router.back()}
+          // Deep link or push leaves an empty stack; without the fallback the
+          // only way off a screen that deletes the account is to kill the app.
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))}
           disabled={isDeleting}
           style={styles.backButton}
           accessibilityRole="button"
@@ -331,7 +333,7 @@ export default function DeleteAccountScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => router.back()}
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))}
                 disabled={isDeleting}
                 style={({ pressed }) => [
                   styles.cancelButton,
