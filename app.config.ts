@@ -17,7 +17,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'freehire-mobile',
+    // What the user sees under the icon. The brand is lowercase everywhere else
+    // (site, page titles, mail), so it is lowercase here too. Deliberately NOT
+    // the slug: `slug`, `scheme`, `bundleIdentifier` and `package` are
+    // identifiers other systems already hold — EAS, the signing profile, the
+    // App Store Connect record, Firebase, and freehire.me's
+    // apple-app-site-association — and renaming any of them makes a different
+    // app, not a renamed one.
+    name: 'freehire',
     slug: 'freehire-mobile',
     version: '1.0.0',
     orientation: 'portrait',
