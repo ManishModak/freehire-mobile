@@ -24,12 +24,16 @@ jobs:
       platform: ios
       profile: production
       submit-ios: true
-      # EAS created this internal group on the first submission and assigns
-      # builds to it. Internal means every member needs a seat in App Store
-      # Connect; handing the app to arbitrary addresses, the way Firebase does,
-      # needs an External group instead — and Apple reviews the first build of
-      # each version before those testers see it.
-      testflight-group: "Team (Expo)"
+      # The internal group: members need a seat in App Store Connect, and get
+      # each build as soon as Apple finishes processing it.
+      #
+      # Only the internal group is named here. `eas submit --groups` documents
+      # itself as taking *internal* groups, and the external group ("Beta")
+      # gains nothing from being listed anyway: nobody in it can install
+      # anything until that build clears Beta App Review, which is submitted by
+      # hand in App Store Connect. Attach the build to the external group there,
+      # in the same visit.
+      testflight-group: "Freehire Test Team"
     secrets: inherit
 
   android:

@@ -45,17 +45,29 @@ message naming the profile, rather than after a full build with a message about
 
 ### Who actually receives it
 
-**iOS** goes to the internal group **`Team (Expo)`**, which EAS created on the
-first submission — [App Store
+**iOS** goes to the internal group **`Freehire Test Team`** — [App Store
 Connect](https://appstoreconnect.apple.com/apps/6801885119/testflight/ios) →
 TestFlight. `release.yml` names it, so tagged builds are assigned automatically.
 
-Internal means every member needs a seat in your App Store Connect (Users and
-Access) — up to 100 people, and they get each build as soon as Apple finishes
-processing it, 5–10 minutes. Handing the app to arbitrary addresses, the way
-Firebase does, needs an **External** group instead: same page, but Apple runs
-Beta App Review on the first build of each version — about a day — and asks for
-"What to Test" notes. Point `testflight-group` at whichever you mean.
+There are two kinds of TestFlight group and the difference is not cosmetic:
+
+- **Internal** — no Apple review, ever. Builds reach testers 5–10 minutes after
+  submission, as soon as Apple finishes processing. Up to 100 people. The price
+  is that each one must be a user in *your* App Store Connect (Users and Access)
+  holding one of: Account Holder, Admin, App Manager, Developer, or Marketing.
+  Marketing is the least privileged of those, so it is the right role for
+  someone who is only meant to test.
+- **External** (`Beta`) — any email address, no account of yours involved. The
+  price is Beta App Review on the first build of *each version*: roughly a day,
+  plus "What to Test" notes and, since the app has a sign-in, a demo account for
+  the reviewer. Once a version is approved, later builds of that same version go
+  out immediately, and the group's public link starts working.
+
+Only the internal group is automated. `eas submit --groups` documents itself as
+taking internal groups, and naming the external one would buy nothing: its
+testers cannot install until that build clears review, which is submitted by
+hand in App Store Connect anyway. Attach the build to `Beta` during the same
+visit.
 
 **Android** goes to the Firebase group **`testers`**, which already exists and
 has its members. No App Store Connect seat, no review, no ceremony — any email
