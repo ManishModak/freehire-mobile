@@ -38,7 +38,7 @@ export const TRACKER_FILTERS = [
 
 export type TrackerFilter = (typeof TRACKER_FILTERS)[number];
 
-export const STAGE_LABELS: Record<string, string> = {
+export const STAGE_LABELS: Record<TrackerStage, string> = {
   preparing: 'Preparing',
   applied: 'Applied',
   screening: 'Screening',
@@ -90,6 +90,7 @@ export const ACTIVE_STAGES: { stage: TrackerStage; label: string }[] = [
  * Maps an application row to its coarse display group.
  * Preserves Saved as a client-only group (saved_at set, no stage, no applied_at).
  * An applied row with an unknown stage or legacy applied_at still maps to 'applied'.
+ * Returns 'unknown' if no stage, applied_at, or saved_at is present.
  */
 export function groupOf(
   job: Pick<TrackedJob, 'stage' | 'applied_at' | 'saved_at'>,
@@ -109,27 +110,28 @@ export function groupOf(
     return 'closed';
   }
 
-  // Saved client-only group: bookmarked, but not yet preparing or applied
-  if (job.saved_at && !job.applied_at && !job.stage) {
-    return 'saved';
-  }
-
-  // Legacy applied_at with no stage, or an application with an unmapped stage
-  if (job.applied_at) {
-    return 'applied';
-  }
-
+  // Unrecognized stage string maps to 'unknown'
   if (job.stage) {
     return 'unknown';
   }
 
-  return 'saved';
+  // Legacy applied_at with no stage
+  if (job.applied_at) {
+    return 'applied';
+  }
+
+  // Saved client-only group: bookmarked, but not yet preparing or applied
+  if (job.saved_at) {
+    return 'saved';
+  }
+
+  return 'unknown';
 }
 
 /** Human-readable label for any stage (known or unknown). */
 export function stageLabel(stage: string | null | undefined): string {
   if (!stage) return '';
-  if (STAGE_LABELS[stage]) return STAGE_LABELS[stage];
+  if (stage in STAGE_LABELS) return STAGE_LABELS[stage as TrackerStage];
   return stage.charAt(0).toUpperCase() + stage.slice(1);
 }
 
@@ -223,11 +225,16 @@ export function canMarkApplied(
   return job.stage === null || job.stage === 'preparing';
 }
 
+/** Helper matching a row by database ID or job public slug. */
+export function isJobMatch(item: TrackedJob, idOrSlug: string): boolean {
+  return item.id === idOrSlug || item.job?.public_slug === idOrSlug;
+}
+
 // --- Pure Optimistic Cache Updates ------------------------------------------
 
 export function optimisticPatchStage(
   oldPage: TrackingPage | undefined,
-  id: string,
+  idOrSlug: string,
   stage: string | null,
   notes?: string | null,
 ): TrackingPage | undefined {
@@ -235,7 +242,7 @@ export function optimisticPatchStage(
   return {
     ...oldPage,
     data: oldPage.data.map((item) => {
-      if (item.id !== id) return item;
+      if (!isJobMatch(item, idOrSlug)) return item;
       return {
         ...item,
         stage: stage !== undefined ? stage : item.stage,
@@ -247,14 +254,14 @@ export function optimisticPatchStage(
 
 export function optimisticPatchNotes(
   oldPage: TrackingPage | undefined,
-  id: string,
+  idOrSlug: string,
   notes: string | null,
 ): TrackingPage | undefined {
   if (!oldPage) return oldPage;
   return {
     ...oldPage,
     data: oldPage.data.map((item) => {
-      if (item.id !== id) return item;
+      if (!isJobMatch(item, idOrSlug)) return item;
       return {
         ...item,
         notes,
@@ -265,14 +272,14 @@ export function optimisticPatchNotes(
 
 export function optimisticPatchApplied(
   oldPage: TrackingPage | undefined,
-  slugOrId: string,
+  idOrSlug: string,
   appliedAt: string,
 ): TrackingPage | undefined {
   if (!oldPage) return oldPage;
   return {
     ...oldPage,
     data: oldPage.data.map((item) => {
-      if (item.id !== slugOrId && item.job?.public_slug !== slugOrId) return item;
+      if (!isJobMatch(item, idOrSlug)) return item;
       return {
         ...item,
         applied_at: appliedAt,
@@ -287,10 +294,10 @@ export function optimisticPatchApplied(
 
 export function optimisticRemoveJob(
   oldPage: TrackingPage | undefined,
-  id: string,
+  idOrSlug: string,
 ): TrackingPage | undefined {
   if (!oldPage) return oldPage;
-  const filtered = oldPage.data.filter((item) => item.id !== id);
+  const filtered = oldPage.data.filter((item) => !isJobMatch(item, idOrSlug));
   return {
     ...oldPage,
     data: filtered,
@@ -303,14 +310,14 @@ export function optimisticRemoveJob(
 
 export function optimisticMoveToSaved(
   oldPage: TrackingPage | undefined,
-  slugOrId: string,
+  idOrSlug: string,
   savedAt: string,
 ): TrackingPage | undefined {
   if (!oldPage) return oldPage;
   return {
     ...oldPage,
     data: oldPage.data.map((item) => {
-      if (item.id !== slugOrId && item.job?.public_slug !== slugOrId) return item;
+      if (!isJobMatch(item, idOrSlug)) return item;
       return {
         ...item,
         saved_at: savedAt,

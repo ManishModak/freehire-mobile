@@ -102,18 +102,18 @@ export const ApplicationCard = memo(function ApplicationCard({
             style={[
               styles.signalPill,
               {
-                backgroundColor: isSilent || isUnconfirmed ? '#3b2912' : c.muted,
+                backgroundColor: isSilent || isUnconfirmed ? c.brandMuted : c.muted,
               },
             ]}>
             <AppSymbol
               name="clock"
               size={12}
-              tintColor={isSilent || isUnconfirmed ? '#ffbd66' : c.mutedForeground}
+              tintColor={isSilent || isUnconfirmed ? c.brandStrong : c.mutedForeground}
             />
             <Text
               style={[
                 styles.signalText,
-                { color: isSilent || isUnconfirmed ? '#ffbd66' : c.mutedForeground },
+                { color: isSilent || isUnconfirmed ? c.brandStrong : c.mutedForeground },
               ]}>
               {silenceText}
             </Text>

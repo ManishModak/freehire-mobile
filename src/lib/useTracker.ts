@@ -88,6 +88,52 @@ type RemoveVars = {
   transport: MutationTransport;
 };
 
+type BaseTrackerVars = {
+  owner: SessionOwner;
+  transport: MutationTransport;
+};
+
+type OptimisticMutationContext = {
+  previous: TrackingPage | undefined;
+  owner: SessionOwner;
+};
+
+function useOptimisticTrackerMutation<TVars extends BaseTrackerVars, TData = unknown>(
+  mutationFn: (vars: TVars) => Promise<TData>,
+  optimisticPatcher: (old: TrackingPage | undefined, vars: TVars) => TrackingPage | undefined,
+  invalidateTracker: (owner: SessionOwner) => void,
+  isOwnerCurrent: (owner: SessionOwner) => boolean,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TData, Error, TVars, OptimisticMutationContext | undefined>({
+    mutationFn,
+    onMutate: async (vars) => {
+      if (!isOwnerCurrent(vars.owner)) return;
+      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
+      await queryClient.cancelQueries({ queryKey: listKey });
+      if (!isOwnerCurrent(vars.owner)) return;
+      const previous = queryClient.getQueryData<TrackingPage>(listKey);
+      queryClient.setQueryData<TrackingPage>(listKey, (old) => optimisticPatcher(old, vars));
+      return { previous, owner: vars.owner };
+    },
+    onError: (_err, _vars, context) => {
+      if (context && isOwnerCurrent(context.owner)) {
+        queryClient.setQueryData(
+          privateKeys.trackerList(context.owner.userId, 'board'),
+          context.previous,
+        );
+      }
+    },
+    onSettled: (_data, _err, vars) => {
+      if (vars) {
+        vars.transport.release();
+        invalidateTracker(vars.owner);
+      }
+    },
+  });
+}
+
 export function useTrackerMutations() {
   const { user, sessionEpoch, isOwnerCurrent, createPrivateMutation } = useAuth();
   const queryClient = useQueryClient();
@@ -106,157 +152,54 @@ export function useTrackerMutations() {
     [isOwnerCurrent, queryClient],
   );
 
-  const markAppliedMutation = useMutation({
-    mutationFn: ({ slug, appliedOn, owner, transport }: MarkAppliedVars) =>
+  const markAppliedMutation = useOptimisticTrackerMutation<MarkAppliedVars, UserJob>(
+    ({ slug, appliedOn, owner, transport }) =>
       markJobApplied(slug, owner.sessionEpoch, appliedOn, transport.signal),
-    onMutate: async (vars) => {
-      if (!isOwnerCurrent(vars.owner)) return;
-      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
-      await queryClient.cancelQueries({ queryKey: listKey });
-      if (!isOwnerCurrent(vars.owner)) return;
-      const previous = queryClient.getQueryData<TrackingPage>(listKey);
-      queryClient.setQueryData<TrackingPage>(listKey, (old) =>
-        optimisticPatchApplied(old, vars.id, new Date().toISOString()),
-      );
-      return { previous, owner: vars.owner };
-    },
-    onError: (_err, _vars, context) => {
-      if (context && isOwnerCurrent(context.owner)) {
-        queryClient.setQueryData(
-          privateKeys.trackerList(context.owner.userId, 'board'),
-          context.previous,
-        );
-      }
-    },
-    onSettled: (_data, _err, vars) => {
-      vars.transport.release();
-      invalidateTracker(vars.owner);
-    },
-  });
+    (old, vars) => optimisticPatchApplied(old, vars.id, new Date().toISOString()),
+    invalidateTracker,
+    isOwnerCurrent,
+  );
 
-  const updateStageMutation = useMutation({
-    mutationFn: ({ id, stage, notes, owner, transport }: UpdateStageVars) =>
+  const updateStageMutation = useOptimisticTrackerMutation<UpdateStageVars, UserJob>(
+    ({ id, stage, notes, owner, transport }) =>
       trackApplication(id, stage, notes, owner.sessionEpoch, transport.signal),
-    onMutate: async (vars) => {
-      if (!isOwnerCurrent(vars.owner)) return;
-      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
-      await queryClient.cancelQueries({ queryKey: listKey });
-      if (!isOwnerCurrent(vars.owner)) return;
-      const previous = queryClient.getQueryData<TrackingPage>(listKey);
-      queryClient.setQueryData<TrackingPage>(listKey, (old) =>
-        optimisticPatchStage(old, vars.id, vars.stage, vars.notes),
-      );
-      return { previous, owner: vars.owner };
-    },
-    onError: (_err, _vars, context) => {
-      if (context && isOwnerCurrent(context.owner)) {
-        queryClient.setQueryData(
-          privateKeys.trackerList(context.owner.userId, 'board'),
-          context.previous,
-        );
-      }
-    },
-    onSettled: (_data, _err, vars) => {
-      vars.transport.release();
-      invalidateTracker(vars.owner);
-    },
-  });
+    (old, vars) => optimisticPatchStage(old, vars.id, vars.stage, vars.notes),
+    invalidateTracker,
+    isOwnerCurrent,
+  );
 
-  const updateNotesMutation = useMutation({
-    mutationFn: ({ id, notes, owner, transport }: UpdateNotesVars) =>
+  const updateNotesMutation = useOptimisticTrackerMutation<UpdateNotesVars, UserJob>(
+    ({ id, notes, owner, transport }) =>
       trackApplication(id, undefined, notes, owner.sessionEpoch, transport.signal),
-    onMutate: async (vars) => {
-      if (!isOwnerCurrent(vars.owner)) return;
-      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
-      await queryClient.cancelQueries({ queryKey: listKey });
-      if (!isOwnerCurrent(vars.owner)) return;
-      const previous = queryClient.getQueryData<TrackingPage>(listKey);
-      queryClient.setQueryData<TrackingPage>(listKey, (old) =>
-        optimisticPatchNotes(old, vars.id, vars.notes),
-      );
-      return { previous, owner: vars.owner };
-    },
-    onError: (_err, _vars, context) => {
-      if (context && isOwnerCurrent(context.owner)) {
-        queryClient.setQueryData(
-          privateKeys.trackerList(context.owner.userId, 'board'),
-          context.previous,
-        );
-      }
-    },
-    onSettled: (_data, _err, vars) => {
-      vars.transport.release();
-      invalidateTracker(vars.owner);
-    },
-  });
+    (old, vars) => optimisticPatchNotes(old, vars.id, vars.notes),
+    invalidateTracker,
+    isOwnerCurrent,
+  );
 
-  const moveToSavedMutation = useMutation({
-    mutationFn: async ({ slug, id, owner, transport }: MoveToSavedVars) => {
-      // Step 1: Save the job
+  const moveToSavedMutation = useOptimisticTrackerMutation<MoveToSavedVars, void>(
+    async ({ slug, id, owner, transport }) => {
       await saveJob(slug, owner.sessionEpoch, transport.signal);
-      // Step 2: Clear the application stage
       try {
         await clearApplicationStage(id, owner.sessionEpoch, transport.signal);
       } catch (err) {
-        // Honest partial failure: the job was saved, but clear stage failed
         throw new Error(
           "Saved to bookmarks, but couldn't clear application progress. Please try again.",
           { cause: err },
         );
       }
     },
-    onMutate: async (vars) => {
-      if (!isOwnerCurrent(vars.owner)) return;
-      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
-      await queryClient.cancelQueries({ queryKey: listKey });
-      if (!isOwnerCurrent(vars.owner)) return;
-      const previous = queryClient.getQueryData<TrackingPage>(listKey);
-      queryClient.setQueryData<TrackingPage>(listKey, (old) =>
-        optimisticMoveToSaved(old, vars.id, new Date().toISOString()),
-      );
-      return { previous, owner: vars.owner };
-    },
-    onError: (_err, _vars, context) => {
-      if (context && isOwnerCurrent(context.owner)) {
-        queryClient.setQueryData(
-          privateKeys.trackerList(context.owner.userId, 'board'),
-          context.previous,
-        );
-      }
-    },
-    onSettled: (_data, _err, vars) => {
-      vars.transport.release();
-      invalidateTracker(vars.owner);
-    },
-  });
+    (old, vars) => optimisticMoveToSaved(old, vars.id, new Date().toISOString()),
+    invalidateTracker,
+    isOwnerCurrent,
+  );
 
-  const removeMutation = useMutation({
-    mutationFn: ({ id, owner, transport }: RemoveVars) =>
+  const removeMutation = useOptimisticTrackerMutation<RemoveVars, UserJob>(
+    ({ id, owner, transport }) =>
       untrackApplication(id, owner.sessionEpoch, transport.signal),
-    onMutate: async (vars) => {
-      if (!isOwnerCurrent(vars.owner)) return;
-      const listKey = privateKeys.trackerList(vars.owner.userId, 'board');
-      await queryClient.cancelQueries({ queryKey: listKey });
-      if (!isOwnerCurrent(vars.owner)) return;
-      const previous = queryClient.getQueryData<TrackingPage>(listKey);
-      queryClient.setQueryData<TrackingPage>(listKey, (old) =>
-        optimisticRemoveJob(old, vars.id),
-      );
-      return { previous, owner: vars.owner };
-    },
-    onError: (_err, _vars, context) => {
-      if (context && isOwnerCurrent(context.owner)) {
-        queryClient.setQueryData(
-          privateKeys.trackerList(context.owner.userId, 'board'),
-          context.previous,
-        );
-      }
-    },
-    onSettled: (_data, _err, vars) => {
-      vars.transport.release();
-      invalidateTracker(vars.owner);
-    },
-  });
+    (old, vars) => optimisticRemoveJob(old, vars.id),
+    invalidateTracker,
+    isOwnerCurrent,
+  );
 
   const markApplied = useCallback(
     async (slug: string, id: string, appliedOn?: string): Promise<UserJob> => {

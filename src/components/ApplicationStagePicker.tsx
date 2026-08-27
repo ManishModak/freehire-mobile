@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -28,12 +27,8 @@ export function ApplicationStagePicker({
   onClose,
 }: ApplicationStagePickerProps) {
   const c = getColors(useColorScheme());
-  const [selectedStage, setSelectedStage] = useState<TrackerStage | null>(
-    (currentStage as TrackerStage) ?? null,
-  );
 
   function handleSelect(stage: TrackerStage) {
-    setSelectedStage(stage);
     onSelectStage(stage);
     onClose();
   }
@@ -61,7 +56,7 @@ export function ApplicationStagePicker({
           <Text style={[styles.sectionTitle, { color: c.brandStrong }]}>Active Pipeline</Text>
           <View style={[styles.groupCard, { backgroundColor: c.card, borderColor: c.border }]}>
             {ACTIVE_STAGES.map((item, index) => {
-              const isSelected = selectedStage === item.stage;
+              const isSelected = currentStage === item.stage;
               const isLast = index === ACTIVE_STAGES.length - 1;
               return (
                 <Pressable
@@ -92,7 +87,7 @@ export function ApplicationStagePicker({
           </Text>
           <View style={[styles.groupCard, { backgroundColor: c.card, borderColor: c.border }]}>
             {CLOSED_OUTCOMES.map((item, index) => {
-              const isSelected = selectedStage === item.stage;
+              const isSelected = currentStage === item.stage;
               const isLast = index === CLOSED_OUTCOMES.length - 1;
               return (
                 <Pressable

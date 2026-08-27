@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useColorScheme,
 } from 'react-native';
@@ -18,6 +17,10 @@ import { AppSymbol } from '@/components/AppSymbol';
 import { ApplicationStagePicker } from '@/components/ApplicationStagePicker';
 import { CompanyLogo } from '@/components/CompanyLogo';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
+import { TrackerActions } from '@/components/tracker/TrackerActions';
+import { TrackerNotesCard } from '@/components/tracker/TrackerNotesCard';
+import { TrackerSignalsCard } from '@/components/tracker/TrackerSignalsCard';
+import { TrackerStageCard } from '@/components/tracker/TrackerStageCard';
 import { getColors, Radius, Space } from '@/constants/freehire';
 import { formatDate, timeAgo } from '@/lib/format';
 import {
@@ -80,6 +83,22 @@ export default function TrackerDetailScreen() {
     onConfirm: () => void;
   } | null>(null);
 
+  const showError = useCallback((title: string, err: unknown) => {
+    const message =
+      err instanceof Error
+        ? err.message
+        : (err as any)?.message ?? 'An unexpected error occurred';
+    setConfirmModal({
+      visible: true,
+      title,
+      message,
+      confirmText: 'OK',
+      cancelText: null,
+      confirmVariant: 'default',
+      onConfirm: () => setConfirmModal(null),
+    });
+  }, []);
+
   if (isLoading) {
     return (
       <SafeAreaView edges={['top']} style={[styles.fill, styles.center, { backgroundColor: c.background }]}>
@@ -137,16 +156,8 @@ export default function TrackerDetailScreen() {
         setConfirmModal(null);
         try {
           await markApplied(currentApp.job!.public_slug, currentApp.id);
-        } catch (err: any) {
-          setConfirmModal({
-            visible: true,
-            title: 'Error',
-            message: err?.message ?? 'Failed to mark as applied',
-            confirmText: 'OK',
-            cancelText: null,
-            confirmVariant: 'default',
-            onConfirm: () => setConfirmModal(null),
-          });
+        } catch (err) {
+          showError('Error', err);
         }
       },
     });
@@ -154,29 +165,13 @@ export default function TrackerDetailScreen() {
 
   function handleSetPreparing() {
     updateStage(currentApp.id, 'preparing').catch((err) => {
-      setConfirmModal({
-        visible: true,
-        title: 'Error',
-        message: err?.message ?? 'Failed to set stage to Preparing',
-        confirmText: 'OK',
-        cancelText: null,
-        confirmVariant: 'default',
-        onConfirm: () => setConfirmModal(null),
-      });
+      showError('Error', err);
     });
   }
 
   function handleSelectStage(stage: TrackerStage) {
     updateStage(currentApp.id, stage, currentApp.notes).catch((err) => {
-      setConfirmModal({
-        visible: true,
-        title: 'Error',
-        message: err?.message ?? 'Failed to update stage',
-        confirmText: 'OK',
-        cancelText: null,
-        confirmVariant: 'default',
-        onConfirm: () => setConfirmModal(null),
-      });
+      showError('Error', err);
     });
   }
 
@@ -184,16 +179,8 @@ export default function TrackerDetailScreen() {
     try {
       await updateNotes(currentApp.id, activeNotes);
       setNotesDraft(null);
-    } catch (err: any) {
-      setConfirmModal({
-        visible: true,
-        title: 'Error',
-        message: err?.message ?? 'Failed to save notes',
-        confirmText: 'OK',
-        cancelText: null,
-        confirmVariant: 'default',
-        onConfirm: () => setConfirmModal(null),
-      });
+    } catch (err) {
+      showError('Error', err);
     }
   }
 
@@ -209,16 +196,8 @@ export default function TrackerDetailScreen() {
         setConfirmModal(null);
         try {
           await moveToSaved(currentApp.job!.public_slug, currentApp.id);
-        } catch (err: any) {
-          setConfirmModal({
-            visible: true,
-            title: 'Notice',
-            message: err?.message ?? 'Failed to move to Saved',
-            confirmText: 'OK',
-            cancelText: null,
-            confirmVariant: 'default',
-            onConfirm: () => setConfirmModal(null),
-          });
+        } catch (err) {
+          showError('Notice', err);
         }
       },
     });
@@ -237,16 +216,8 @@ export default function TrackerDetailScreen() {
           await removeFromTracker(currentApp.id);
           if (router.canGoBack()) router.back();
           else router.replace('/' as any);
-        } catch (err: any) {
-          setConfirmModal({
-            visible: true,
-            title: 'Error',
-            message: err?.message ?? 'Failed to remove application',
-            confirmText: 'OK',
-            cancelText: null,
-            confirmVariant: 'default',
-            onConfirm: () => setConfirmModal(null),
-          });
+        } catch (err) {
+          showError('Error', err);
         }
       },
     });
@@ -294,207 +265,43 @@ export default function TrackerDetailScreen() {
           </View>
 
           {/* Lifecycle & Stage Management Card */}
-          <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
-            <View style={styles.stageHeaderRow}>
-              <View>
-                <Text style={[styles.cardSectionLabel, { color: c.mutedForeground }]}>Current stage</Text>
-                <Text style={[styles.stageValue, { color: c.foreground }]}>{currentStageLabel}</Text>
-                {appliedDate ? (
-                  <Text style={[styles.appliedDateText, { color: c.mutedForeground }]}>
-                    Applied {appliedDate}
-                  </Text>
-                ) : null}
-              </View>
-
-              <Pressable
-                onPress={() => setIsPickerVisible(true)}
-                disabled={isUpdatingStage}
-                accessibilityRole="button"
-                accessibilityLabel="Change application stage"
-                style={({ pressed }) => [
-                  styles.changeStageButton,
-                  { backgroundColor: c.muted, borderColor: c.border },
-                  pressed && { opacity: 0.7 },
-                ]}>
-                <Text style={[styles.changeStageText, { color: c.brandStrong }]}>Change stage</Text>
-                <AppSymbol name="chevron.down" size={14} tintColor={c.brandStrong} />
-              </Pressable>
-            </View>
-
-            {/* If Saved or eligible to mark applied, show explicit quick actions */}
-            {eligibleForApply ? (
-              <View style={[styles.quickActionsBox, { backgroundColor: c.muted, borderColor: c.border }]}>
-                <Text style={[styles.quickActionsTitle, { color: c.foreground }]}>
-                  Ready to update?
-                </Text>
-                <Text style={[styles.quickActionsBody, { color: c.mutedForeground }]}>
-                  Mark this application applied only after you submitted your application.
-                </Text>
-
-                <View style={styles.applyActionButtons}>
-                  <Pressable
-                    onPress={handleMarkAppliedToday}
-                    disabled={isMarkingApplied}
-                    accessibilityRole="button"
-                    accessibilityLabel="Mark as applied today"
-                    style={({ pressed }) => [
-                      styles.markAppliedBtn,
-                      { backgroundColor: c.brand },
-                      pressed && { opacity: 0.8 },
-                    ]}>
-                    <Text style={[styles.markAppliedText, { color: c.brandForeground }]}>
-                      {isMarkingApplied ? 'Marking...' : 'Mark as applied today'}
-                    </Text>
-                  </Pressable>
-
-                  {isSavedGroup ? (
-                    <Pressable
-                      onPress={handleSetPreparing}
-                      disabled={isUpdatingStage}
-                      accessibilityRole="button"
-                      accessibilityLabel="Set stage to preparing"
-                      style={({ pressed }) => [
-                        styles.setPreparingBtn,
-                        { borderColor: c.border },
-                        pressed && { opacity: 0.7 },
-                      ]}>
-                      <Text style={[styles.setPreparingText, { color: c.foreground }]}>
-                        Or set Preparing
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              </View>
-            ) : null}
-          </View>
+          <TrackerStageCard
+            currentStageLabel={currentStageLabel}
+            appliedDate={appliedDate}
+            eligibleForApply={eligibleForApply}
+            isSavedGroup={isSavedGroup}
+            isMarkingApplied={isMarkingApplied}
+            isUpdatingStage={isUpdatingStage}
+            onChangeStagePress={() => setIsPickerVisible(true)}
+            onMarkAppliedToday={handleMarkAppliedToday}
+            onSetPreparing={handleSetPreparing}
+          />
 
           {/* Notes Card */}
-          <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
-            <View style={styles.notesHeader}>
-              <Text style={[styles.cardSectionLabel, { color: c.mutedForeground }]}>Notes</Text>
-              {isNotesDirty ? (
-                <Pressable
-                  onPress={handleSaveNotes}
-                  disabled={isUpdatingNotes}
-                  accessibilityRole="button"
-                  accessibilityLabel="Save notes"
-                  style={[styles.saveNotesBtn, { backgroundColor: c.brand }]}>
-                  <Text style={[styles.saveNotesBtnText, { color: c.brandForeground }]}>
-                    {isUpdatingNotes ? 'Saving...' : 'Save'}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            <TextInput
-              value={activeNotes}
-              onChangeText={setNotesDraft}
-              placeholder="Add interview dates, contacts, or referral details…"
-              placeholderTextColor={c.mutedForeground}
-              multiline
-              numberOfLines={4}
-              style={[
-                styles.notesInput,
-                { color: c.foreground, borderColor: c.border, backgroundColor: c.muted },
-              ]}
-            />
-          </View>
+          <TrackerNotesCard
+            notes={activeNotes}
+            isDirty={isNotesDirty}
+            isSaving={isUpdatingNotes}
+            onChangeNotes={setNotesDraft}
+            onSaveNotes={handleSaveNotes}
+          />
 
           {/* Signals & History Card */}
-          <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
-            <Text style={[styles.cardSectionLabel, { color: c.mutedForeground }]}>Signals & Activity</Text>
-
-            <View style={styles.signalsList}>
-              {silenceText ? (
-                <View style={styles.signalItem}>
-                  <AppSymbol name="clock" size={16} tintColor="#ffbd66" />
-                  <View style={styles.signalItemText}>
-                    <Text style={[styles.signalItemTitle, { color: c.foreground }]}>Silence status</Text>
-                    <Text style={[styles.signalItemSub, { color: '#ffbd66' }]}>{silenceText}</Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {cvOpenedAgo ? (
-                <View style={styles.signalItem}>
-                  <AppSymbol name="doc.text" size={16} tintColor={c.brandStrong} />
-                  <View style={styles.signalItemText}>
-                    <Text style={[styles.signalItemTitle, { color: c.foreground }]}>CV opened</Text>
-                    <Text style={[styles.signalItemSub, { color: c.mutedForeground }]}>
-                      Opened {cvOpenedAgo}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {followedUpAgo ? (
-                <View style={styles.signalItem}>
-                  <AppSymbol name="arrow.uturn.right" size={16} tintColor={c.brandStrong} />
-                  <View style={styles.signalItemText}>
-                    <Text style={[styles.signalItemTitle, { color: c.foreground }]}>Followed up</Text>
-                    <Text style={[styles.signalItemSub, { color: c.mutedForeground }]}>
-                      Chased {followedUpAgo}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {currentApp.email_count > 0 ? (
-                <View style={styles.signalItem}>
-                  <AppSymbol name="text.bubble" size={16} tintColor={c.brandStrong} />
-                  <View style={styles.signalItemText}>
-                    <Text style={[styles.signalItemTitle, { color: c.foreground }]}>Linked emails</Text>
-                    <Text style={[styles.signalItemSub, { color: c.mutedForeground }]}>
-                      {currentApp.email_count} {currentApp.email_count === 1 ? 'message' : 'messages'}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {!silenceText && !cvOpenedAgo && !followedUpAgo && currentApp.email_count === 0 ? (
-                <Text style={[styles.noSignalsText, { color: c.mutedForeground }]}>
-                  No active signals recorded yet.
-                </Text>
-              ) : null}
-            </View>
-          </View>
+          <TrackerSignalsCard
+            silenceText={silenceText}
+            cvOpenedAgo={cvOpenedAgo}
+            followedUpAgo={followedUpAgo}
+            emailCount={currentApp.email_count}
+          />
 
           {/* Secondary Actions / Danger Zone */}
-          <View style={styles.actionsSection}>
-            {!isSavedGroup && !pruned ? (
-              <Pressable
-                onPress={handleMoveToSaved}
-                disabled={isMovingToSaved}
-                accessibilityRole="button"
-                accessibilityLabel="Move to Saved list"
-                style={({ pressed }) => [
-                  styles.secondaryActionBtn,
-                  { borderColor: c.border, backgroundColor: c.card },
-                  pressed && { opacity: 0.7 },
-                ]}>
-                <AppSymbol name="bookmark" size={16} tintColor={c.foreground} />
-                <Text style={[styles.secondaryActionText, { color: c.foreground }]}>
-                  Move to Saved
-                </Text>
-              </Pressable>
-            ) : null}
-
-            <Pressable
-              onPress={handleRemove}
-              disabled={isRemoving}
-              accessibilityRole="button"
-              accessibilityLabel="Remove from Tracker"
-              style={({ pressed }) => [
-                styles.removeButton,
-                { borderColor: '#ff777c', backgroundColor: '#3a1719' },
-                pressed && { opacity: 0.7 },
-              ]}>
-              <AppSymbol name="trash" size={16} tintColor="#ff777c" />
-              <Text style={[styles.removeButtonText, { color: '#ff777c' }]}>
-                Remove from Tracker
-              </Text>
-            </Pressable>
-          </View>
+          <TrackerActions
+            showMoveToSaved={!isSavedGroup && !pruned}
+            isMovingToSaved={isMovingToSaved}
+            isRemoving={isRemoving}
+            onMoveToSaved={handleMoveToSaved}
+            onRemove={handleRemove}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -594,154 +401,6 @@ const styles = StyleSheet.create({
   companySubtitle: {
     fontSize: 14,
   },
-  stageHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  cardSectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  stageValue: {
-    fontSize: 17,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  appliedDateText: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  changeStageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Space.md,
-    paddingVertical: 6,
-  },
-  changeStageText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quickActionsBox: {
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    padding: Space.md,
-    marginTop: Space.sm,
-    gap: Space.xs,
-  },
-  quickActionsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  quickActionsBody: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  applyActionButtons: {
-    flexDirection: 'row',
-    gap: Space.sm,
-    marginTop: Space.xs,
-    flexWrap: 'wrap',
-  },
-  markAppliedBtn: {
-    borderRadius: Radius.md,
-    paddingHorizontal: Space.md,
-    paddingVertical: Space.sm,
-  },
-  markAppliedText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  setPreparingBtn: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: Space.md,
-    paddingVertical: Space.sm,
-  },
-  setPreparingText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  notesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  saveNotesBtn: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: Space.md,
-    paddingVertical: 4,
-  },
-  saveNotesBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  notesInput: {
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Space.sm,
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  signalsList: {
-    gap: Space.sm,
-    marginTop: Space.xs,
-  },
-  signalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Space.sm,
-  },
-  signalItemText: {
-    flex: 1,
-  },
-  signalItemTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  signalItemSub: {
-    fontSize: 12,
-  },
-  noSignalsText: {
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-  actionsSection: {
-    gap: Space.sm,
-    marginTop: Space.sm,
-  },
-  secondaryActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Space.xs,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingVertical: Space.md,
-  },
-  secondaryActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  removeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Space.xs,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingVertical: Space.md,
-  },
-  removeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   stateTitle: {
     fontSize: 17,
     fontWeight: '700',
@@ -760,3 +419,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

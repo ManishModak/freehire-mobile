@@ -156,9 +156,9 @@ export default function TrackerScreen() {
 
         {/* Bounded 500 Warning if server has more rows than returned */}
         {isCapped ? (
-          <View style={[styles.cappedWarning, { backgroundColor: '#3b2912', borderColor: '#ffbd66' }]}>
-            <AppSymbol name="exclamationmark.circle" size={14} tintColor="#ffbd66" />
-            <Text style={[styles.cappedText, { color: '#ffe8c8' }]}>
+          <View style={[styles.cappedWarning, { backgroundColor: c.muted, borderColor: c.border }]}>
+            <AppSymbol name="exclamationmark.circle" size={14} tintColor={c.brandStrong} />
+            <Text style={[styles.cappedText, { color: c.foreground }]}>
               Showing first {allJobs.length} of {meta?.total} applications.
             </Text>
           </View>

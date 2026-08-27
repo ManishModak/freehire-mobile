@@ -85,6 +85,10 @@ describe('tracker stages and groups', () => {
     );
   });
 
+  it('maps row with no stage, applied_at, or saved_at to unknown', () => {
+    expect(groupOf({ stage: null, applied_at: null, saved_at: null })).toBe('unknown');
+  });
+
   it('formats stage labels cleanly including fallback for unknown stages', () => {
     expect(stageLabel('interview')).toBe('Interview');
     expect(stageLabel('custom_stage')).toBe('Custom_stage');
@@ -220,7 +224,13 @@ describe('optimistic cache transforms', () => {
   const initialPage: TrackingPage = {
     data: [
       { ...sampleJob, id: 'job-1', stage: 'preparing', notes: 'Initial notes' },
-      { ...sampleJob, id: 'job-2', stage: null, saved_at: '2026-08-01' },
+      {
+        ...sampleJob,
+        id: 'job-2',
+        stage: null,
+        saved_at: '2026-08-01',
+        job: { ...sampleJob.job!, public_slug: 'other-job-slug' },
+      },
     ],
     meta: {
       total: 2,
@@ -266,5 +276,17 @@ describe('optimistic cache transforms', () => {
     expect(updated?.data[0]?.applied_at).toBeNull();
     expect(updated?.data[0]?.stage).toBeNull();
     expect(updated?.data[0]?.silence_state).toBeNull();
+  });
+
+  it('matches by job public_slug across optimistic patchers', () => {
+    const updatedStage = optimisticPatchStage(initialPage, 'acme-backend-engineer', 'interview');
+    expect(updatedStage?.data[0]?.stage).toBe('interview');
+
+    const updatedNotes = optimisticPatchNotes(initialPage, 'acme-backend-engineer', 'Slug matched notes');
+    expect(updatedNotes?.data[0]?.notes).toBe('Slug matched notes');
+
+    const updatedRemoved = optimisticRemoveJob(initialPage, 'acme-backend-engineer');
+    expect(updatedRemoved?.data.length).toBe(1);
+    expect(updatedRemoved?.data[0]?.id).toBe('job-2');
   });
 });
